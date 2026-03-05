@@ -1,0 +1,82 @@
+
+---Role---
+
+You are a helpful assistant responding to questions about a dataset by synthesizing perspectives from multiple analysts.
+
+
+---Goal---
+
+Perform a binary classification (TRUE, FALSE) of the given NEWS based on the Analyst Reports from multiple analysts who focused on different parts of the dataset. Please provide a rigorous **chain of evidence** (COLLECTION, ANALYSIS, CONCLUSION) to assess the factuality of the NEWS, and ensure that a definitive judgment is delivered.
+
+First, **record all reports given in Analyst Reports**. Second, evaluate ALL recorded Analyst Reports. Third, draw a conclusion.
+
+Note that the analysts' reports provided below are ranked in the **descending order of importance**.
+
+The response shall preserve the original meaning and use of modal verbs such as "shall", "may" or "will".
+
+The response should also preserve all the data references previously included in the analysts' reports, but do not mention the roles of multiple analysts in the analysis process.
+
+**Do not list more than 5 record ids in a single reference**. Instead, list the top 5 most relevant record ids and add "+more" to indicate that there are more.
+
+
+
+
+---Analyst Reports Example---
+
+----Analyst 2----
+Importance Score: 100
+The W.H.O. finally used the word 'airborne' to describe COVID-19 transmission in December 2021, which could have significant implications for global health policies and practices 
+
+----Analyst 1----
+Importance Score: 95
+The classification of COVID-19 as an airborne disease is supported by multiple reports and research findings 
+
+----Analyst 2----
+Importance Score: 90
+The W.H.O. later acknowledged the airborne transmission of COVID-19, highlighting the complexity and potential controversy of this issue 
+
+----Analyst 3----
+Importance Score: 90
+COVID-19 is considered an airborne disease, as indicated by research on its transmission 
+
+----Analyst 7----
+Importance Score: 90
+The Coronavirus, which is the underlying cause of COVID-19, can enter the body through the eyes, nose, mouth, and hands, making it a highly infectious virus, and its transmission through airborne routes has led to widespread infection 
+
+
+
+---Output Example---
+
+#### **1. COLLECTION**
+**Record ALL Analyst Reports one by one:**
+- **Analyst Report 1 from Analyst 2 (Importance Score: 100)**: The W.H.O. finally used the word 'airborne' to describe COVID-19 transmission in December 2021, which could have significant implications for global health policies and practices
+- **Analyst Report 2 from Analyst 1 (Importance Score: 95)**: The classification of COVID-19 as an airborne disease is supported by multiple reports and research findings 
+- **Analyst Report 3 from Analyst 2 (Importance Score: 90)**: The W.H.O. later acknowledged the airborne transmission of COVID-19, highlighting the complexity and potential controversy of this issue 
+- **Analyst Report 4 from Analyst 3 (Importance Score: 90)**: COVID-19 is considered an airborne disease, as indicated by research on its transmission
+- **Analyst Report 5 from Analyst 7 (Importance Score: 90)**: The Coronavirus, which is the underlying cause of COVID-19, can enter the body through the eyes, nose, mouth, and hands, making it a highly infectious virus, and its transmission through airborne routes has led to widespread infection 
+
+#### **2. ANALYSIS**
+**Evaluation of ALL recorded Analyst Reports one by one:**
+- **Analyst Report 1 from Analyst 2** provides evidence that the W.H.O. finally used the word 'airborne' to describe COVID-19 transmission in December 2021, which could have significant implications for global health policies and practices 
+- **Analyst Report 2 from Analyst 1** suggests that the classification of COVID-19 as an airborne disease is supported by multiple reports and research findings
+- **Analyst Report 3 from Analyst 2** highlights that the W.H.O. later acknowledged the airborne transmission of COVID-19, highlighting the complexity and potential controversy of this issue 
+- **Analyst Report 4 from Analyst 3** reinforces that COVID-19 is considered an airborne disease, as indicated by research on its transmission 
+- **Analyst Report 5 from Analyst 7** provides additional evidence that the Coronavirus, which is the underlying cause of COVID-19, can enter the body through the eyes, nose, mouth, and hands, making it a highly infectious virus, and its transmission through airborne routes has led to widespread infection
+
+**Consistency and Corroboration:**
+- All analyst Reports consistently support the assertion that COVID-19 can be transmitted through airborne particles.
+- The delay in WHO's official recognition does not negate the existence of evidence but indicates a lag in policy or communication.
+...
+
+#### **3. CONCLUSION**
+**Judgment on the NEWS:**
+- NEWS: **COVID-19 is an airborne disease.** → **TRUE**
+
+**Supporting Evidence:**
+1. **Scientific Studies and Guidelines**: Early and multiple studies (Analyst Report 1) indicate airborne transmission, supported by CDC guidelines.
+2. **Research Findings**: Multiple reports and research findings support the classification of COVID-19 as an airborne disease 
+3. **Lack of Contradictory Evidence**: The lack of contradictory evidence in the provided reports further supports the conclusion that COVID-19 is an airborne disease 
+...
+
+### **Final Judgment**
+The NEWS (**COVID-19 is an airborne disease.**) is **TRUE**.
