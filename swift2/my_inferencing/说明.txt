@@ -1,0 +1,4 @@
+将lora从swift格式转换成peft格式:
+CUDA_VISIBLE_DEVICES=0 python llm_export.py \
+    --ckpt_dir /home/hanlv/workspace/code/research/infodemic/LLM/swift/examples/pytorch/llm/output/openchat_3.5/with_solar_info/brave/data1-split=8:2-ratio=1.0/dora-r=3/lr=8e-5-20240322-12:39:34/checkpoint-609 \
+    --to_peft_format true

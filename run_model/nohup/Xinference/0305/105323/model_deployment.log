@@ -1,0 +1,13 @@
+=== Deployment Environment ===
+Time: Thu Mar  5 10:53:54 AM CST 2026
+Conda Environment: xinference
+Python: /home/zhouzehui/miniconda3/envs/xinference/bin/python
+Xinference: /home/zhouzehui/miniconda3/envs/xinference/bin/xinference
+Working Directory: /home/zhouzehui/workspace/workspace/veritas_v1/run_model/Gte-Qwen-2B
+===============================
+🚀 Launching model: gte-Qwen2
+fatal: bad revision 'HEAD'
+Launch model name: gte-Qwen2 with kwargs: {}
+Launching model:   0%|           | 0.0%Launching model:  80%|████████   | 80.0%Launching model: 100%|██████████ | 100.0%Launching model: 100%|██████████ | 100.0%
+Model uid: gte-Qwen2
+✅ Model deployment command completed

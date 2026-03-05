@@ -1,0 +1,18 @@
+INFO:celery_app:Celery results directory: /home/zhouzehui/workspace/workspace/veritas_v1/celery_results
+INFO:callback_manager:CallbackManager initialized, config directory: /home/zhouzehui/workspace/workspace/veritas_v1/logs/callbacks
+INFO:flower.command:Visit me at http://0.0.0.0:5556
+INFO:flower.command:Broker: redis://localhost:6379/0
+INFO:flower.command:Registered tasks: 
+['celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap',
+ 'celery_app.debug_task',
+ 'tasks.run_chat_task']
+INFO:kombu.mixins:Connected to redis://localhost:6379/0
+INFO:flower.command:15 detected, shutting down

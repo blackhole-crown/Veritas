@@ -1,0 +1,7 @@
+INFO:celery_app:Celery results directory: /home/zhouzehui/workspace/workspace/veritas_v1/celery_results
+INFO:callback_manager:CallbackManager initialized, config directory: /home/zhouzehui/workspace/workspace/veritas_v1/logs/callbacks
+[2026-03-05 08:41:53,158: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-03-05 08:41:53,161: INFO/MainProcess] mingle: searching for neighbors
+[2026-03-05 08:41:54,168: INFO/MainProcess] mingle: all alone
+[2026-03-05 08:41:54,173: INFO/MainProcess] celery@iZuf6igtyhytr4cps9ypq1Z ready.
+[2026-03-05 08:42:06,085: INFO/MainProcess] Events of group {task} enabled by remote.

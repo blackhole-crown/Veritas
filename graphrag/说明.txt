@@ -1,0 +1,56 @@
+- 初始化
+graphrag init --root sample
+
+
+- 建立索引 √
+graphrag index --root sample  
+
+
+- 全局查询
+Q="Below is a CLAIM and its publication date. To classify the CLAIM more accurately (if the content described by the CLAIM is correct, it will be classified as TRUE; if the content described by the CLAIM is incorrect, it will be classified as FALSE), please provide reasonable evidence to judge the correctness of the CLAIM based on the available information and your knowledge.\nPublication date: 2020-03-31\nContent: COVID-19 is an airborne disease." \
+
+graphrag query \
+--root sample \
+--method global \
+--query "Below is a CLAIM and its publication date. To classify the CLAIM more accurately (if the content described by the CLAIM is correct, it will be classified as TRUE; if the content described by the CLAIM is incorrect, it will be classified as FALSE), please provide reasonable evidence to judge the correctness of the CLAIM based on the available information and your knowledge and you must give a clear judgment result (TRUE or FALSE, wrapped in **).\nPublication date: 2020-05-14\nContent: You have areas of Pennsylvania that are barely affected and [the governor wants] to keep them closed."
+
+* 输出存在格式问题，不符合json格式,但是可以输出结果,不能按照markdown来输出，新版本lazy强制要求json格式
+
+解决方案一：           #查询时越过json格式检测   False/失败
+                      # 强制文本响应
+graphrag query \
+--root sample \
+--method global \
+--query "You are now required to classify the following NEWS. Please present a **chain of evidence** as outlined above, and provide a definitive judgment result (TRUE or FALSE, wrapped in **)."
+--response-type text 
+
+解决方案二：
+更改lazy内部提示词，从markdown格式转换为标准的json格式
+
+
+
+- 局部查询
+graphrag query \
+--root sample \
+--method local \
+--query "Below is a CLAIM and its publication date. To classify the CLAIM more accurately (if the content described by the CLAIM is correct, it will be classified as TRUE; if the content described by the CLAIM is incorrect, it will be classified as FALSE), please provide reasonable evidence to judge the correctness of the CLAIM based on the available information and your knowledge and you must give a clear judgment result (TRUE or FALSE, wrapped in **).\nPublication date: 2020-05-14\nContent: You have areas of Pennsylvania that are barely affected and [the governor wants] to keep them closed."
+
+
+
+
+graphrag query \
+--root sample \
+--method global \
+--query "You are now required to classify the following NEWS. Please present a **chain of evidence** as outlined above, and provide a definitive judgment result (TRUE or FALSE, wrapped in **).\n\NEWS: **中华人民共和国成立于1948年**"
+
+# 遇到报错  看看是不是配置文件里面模型没修改回来
+
+
+
+graphrag query \
+--root /home/zhouzehui/workspace/ChaJian/workspace/addon/graphrag/sample  \
+--method local \
+--query "You are now required to classify the following NEWS. Please present a **chain of evidence** as outlined above, and provide a definitive judgment result (TRUE or FALSE, wrapped in **).\n\NEWS: **中华人民共和国成立于1948年**"
+
+
+** 将这部分作为初始化脚本的一部分

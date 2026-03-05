@@ -1,0 +1,190 @@
+🚀 Starting Xinference service on port 9997...
+📁 Working directory: /home/zhouzehui/workspace/workspace/veritas_v1
+fatal: bad revision 'HEAD'
+/home/zhouzehui/miniconda3/envs/xinference/lib/python3.10/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+fatal: bad revision 'HEAD'
+/home/zhouzehui/miniconda3/envs/xinference/lib/python3.10/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+2026-03-05 10:53:35,724 xinference.core.supervisor 2790163 INFO     Xinference supervisor 0.0.0.0:10993 started
+2026-03-05 10:53:35,771 xinference.core.worker 2790163 INFO     Starting metrics export server at 0.0.0.0:None
+2026-03-05 10:53:35,773 xinference.core.worker 2790163 INFO     Checking metrics export server...
+2026-03-05 10:53:36,636 xinference.core.worker 2790163 INFO     Metrics server is started at: http://0.0.0.0:40169
+2026-03-05 10:53:36,637 xinference.core.worker 2790163 INFO     Purge cache directory: /home/zhouzehui/.xinference/cache
+2026-03-05 10:53:36,637 xinference.core.utils 2790163 INFO     Remove empty directory: /home/zhouzehui/.xinference/cache/v2
+2026-03-05 10:53:36,640 xinference.core.worker 2790163 INFO     Connected to supervisor as a fresh worker
+2026-03-05 10:53:36,659 xinference.core.worker 2790163 INFO     Xinference worker 0.0.0.0:10993 started
+2026-03-05 10:53:43,276 xinference.api.restful_api 2790040 INFO     Starting Xinference at endpoint: http://0.0.0.0:9997
+2026-03-05 10:53:43,387 uvicorn.error 2790040 INFO     Uvicorn running on http://0.0.0.0:9997 (Press CTRL+C to quit)
+2026-03-05 10:53:55,120 xinference.core.worker 2790163 INFO     [request 8c9af134-183e-11f1-b20a-00163e21f65d] Enter launch_builtin_model, args: <xinference.core.worker.WorkerActor object at 0x7b21edf8a1b0>, kwargs: model_uid=gte-Qwen2-0,model_name=gte-Qwen2,model_size_in_billions=None,model_format=None,quantization=None,model_engine=None,model_type=embedding,n_gpu=auto,request_limits=None,peft_model_config=None,gpu_idx=[0],download_hub=None,model_path=/data/zhouzehui/models/gte_Qwen2-1_5B-instruct,enable_virtual_env=None,virtual_env_packages=None,envs=None,xavier_config=None,trust_remote_code=True
+2026-03-05 10:53:55,121 xinference.core.worker 2790163 INFO     You specify to launch the model: gte-Qwen2 on GPU index: [0] of the worker: 0.0.0.0:10993, xinference will automatically ignore the `n_gpu` option.
+fatal: bad revision 'HEAD'
+/home/zhouzehui/miniconda3/envs/xinference/lib/python3.10/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+2026-03-05 10:53:59,300 xinference.core.model 2790864 INFO     Start requests handler.
+No sentence-transformers model found with name /data/zhouzehui/models/gte_Qwen2-1_5B-instruct. Creating a new one with mean pooling.
+2026-03-05 10:54:02,810 transformers.configuration_utils 2790864 INFO     loading configuration file /data/zhouzehui/models/gte_Qwen2-1_5B-instruct/config.json
+loading configuration file /data/zhouzehui/models/gte_Qwen2-1_5B-instruct/config.json
+2026-03-05 10:54:02,815 transformers.configuration_utils 2790864 INFO     Model config Qwen2Config {
+  "architectures": [
+    "Qwen2ForCausalLM"
+  ],
+  "attention_dropout": 0.0,
+  "auto_map": {
+    "AutoModel": "modeling_qwen.Qwen2Model",
+    "AutoModelForCausalLM": "modeling_qwen.Qwen2ForCausalLM",
+    "AutoModelForSequenceClassification": "modeling_qwen.Qwen2ForSequenceClassification"
+  },
+  "bos_token_id": 151643,
+  "dtype": "float32",
+  "eos_token_id": 151643,
+  "hidden_act": "silu",
+  "hidden_size": 1536,
+  "initializer_range": 0.02,
+  "intermediate_size": 8960,
+  "layer_types": [
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention"
+  ],
+  "max_position_embeddings": 131072,
+  "max_window_layers": 21,
+  "model_type": "qwen2",
+  "num_attention_heads": 12,
+  "num_hidden_layers": 28,
+  "num_key_value_heads": 2,
+  "rms_norm_eps": 1e-06,
+  "rope_scaling": null,
+  "rope_theta": 1000000.0,
+  "sliding_window": null,
+  "tie_word_embeddings": false,
+  "transformers_version": "4.56.2",
+  "use_cache": true,
+  "use_sliding_window": false,
+  "vocab_size": 151646
+}
+
+Model config Qwen2Config {
+  "architectures": [
+    "Qwen2ForCausalLM"
+  ],
+  "attention_dropout": 0.0,
+  "auto_map": {
+    "AutoModel": "modeling_qwen.Qwen2Model",
+    "AutoModelForCausalLM": "modeling_qwen.Qwen2ForCausalLM",
+    "AutoModelForSequenceClassification": "modeling_qwen.Qwen2ForSequenceClassification"
+  },
+  "bos_token_id": 151643,
+  "dtype": "float32",
+  "eos_token_id": 151643,
+  "hidden_act": "silu",
+  "hidden_size": 1536,
+  "initializer_range": 0.02,
+  "intermediate_size": 8960,
+  "layer_types": [
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention",
+    "full_attention"
+  ],
+  "max_position_embeddings": 131072,
+  "max_window_layers": 21,
+  "model_type": "qwen2",
+  "num_attention_heads": 12,
+  "num_hidden_layers": 28,
+  "num_key_value_heads": 2,
+  "rms_norm_eps": 1e-06,
+  "rope_scaling": null,
+  "rope_theta": 1000000.0,
+  "sliding_window": null,
+  "tie_word_embeddings": false,
+  "transformers_version": "4.56.2",
+  "use_cache": true,
+  "use_sliding_window": false,
+  "vocab_size": 151646
+}
+
+2026-03-05 10:54:02,822 transformers.modeling_utils 2790864 INFO     loading weights file /data/zhouzehui/models/gte_Qwen2-1_5B-instruct/model.safetensors.index.json
+loading weights file /data/zhouzehui/models/gte_Qwen2-1_5B-instruct/model.safetensors.index.json
+Loading checkpoint shards:   0%|                         | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|████████▌        | 1/2 [00:01<00:01,  1.61s/it]Loading checkpoint shards: 100%|█████████████████| 2/2 [00:01<00:00,  1.26it/s]Loading checkpoint shards: 100%|█████████████████| 2/2 [00:01<00:00,  1.09it/s]
+2026-03-05 10:54:04,848 transformers.modeling_utils 2790864 INFO     Some weights of the model checkpoint at /data/zhouzehui/models/gte_Qwen2-1_5B-instruct were not used when initializing Qwen2Model: ['lm_head.weight']
+- This IS expected if you are initializing Qwen2Model from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing Qwen2Model from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+Some weights of the model checkpoint at /data/zhouzehui/models/gte_Qwen2-1_5B-instruct were not used when initializing Qwen2Model: ['lm_head.weight']
+- This IS expected if you are initializing Qwen2Model from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing Qwen2Model from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+2026-03-05 10:54:04,848 transformers.modeling_utils 2790864 INFO     All the weights of Qwen2Model were initialized from the model checkpoint at /data/zhouzehui/models/gte_Qwen2-1_5B-instruct.
+If your task is similar to the task the model of the checkpoint was trained on, you can already use Qwen2Model for predictions without further training.
+All the weights of Qwen2Model were initialized from the model checkpoint at /data/zhouzehui/models/gte_Qwen2-1_5B-instruct.
+If your task is similar to the task the model of the checkpoint was trained on, you can already use Qwen2Model for predictions without further training.
+2026-03-05 10:54:04,861 transformers.tokenization_utils_base 2790864 INFO     loading file vocab.json
+loading file vocab.json
+2026-03-05 10:54:04,862 transformers.tokenization_utils_base 2790864 INFO     loading file merges.txt
+loading file merges.txt
+2026-03-05 10:54:04,862 transformers.tokenization_utils_base 2790864 INFO     loading file tokenizer.json
+loading file tokenizer.json
+2026-03-05 10:54:04,862 transformers.tokenization_utils_base 2790864 INFO     loading file added_tokens.json
+loading file added_tokens.json
+2026-03-05 10:54:04,862 transformers.tokenization_utils_base 2790864 INFO     loading file special_tokens_map.json
+loading file special_tokens_map.json
+2026-03-05 10:54:04,862 transformers.tokenization_utils_base 2790864 INFO     loading file tokenizer_config.json
+loading file tokenizer_config.json
+2026-03-05 10:54:04,862 transformers.tokenization_utils_base 2790864 INFO     loading file chat_template.jinja
+loading file chat_template.jinja
+2026-03-05 10:54:05,192 transformers.tokenization_utils_base 2790864 INFO     Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+Special tokens have been added in the vocabulary, make sure the associated word embeddings are fine-tuned or trained.
+2026-03-05 10:54:05,193 xinference.core.model 2790864 INFO     ModelActor(gte-Qwen2-0) loaded
+2026-03-05 10:54:05,194 xinference.core.worker 2790163 INFO     [request 8c9af134-183e-11f1-b20a-00163e21f65d] Leave launch_builtin_model, elapsed time: 10 s
+2026-03-05 10:54:05,195 xinference.core.worker 2790163 INFO     [request 929c5186-183e-11f1-b20a-00163e21f65d] Enter wait_for_load, args: <xinference.core.worker.WorkerActor object at 0x7b21edf8a1b0>,gte-Qwen2-0, kwargs: 
+2026-03-05 10:54:05,196 xinference.core.worker 2790163 INFO     [request 929c5186-183e-11f1-b20a-00163e21f65d] Leave wait_for_load, elapsed time: 0 s
+`SentenceTransformer._target_device` has been deprecated, please use `SentenceTransformer.device` instead.
+Batches:   0%|                                           | 0/1 [00:00<?, ?it/s]Batches: 100%|███████████████████████████████████| 1/1 [00:00<00:00,  3.59it/s]Batches: 100%|███████████████████████████████████| 1/1 [00:00<00:00,  3.59it/s]

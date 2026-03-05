@@ -1,0 +1,22 @@
+ 
+ -------------- celery@iZuf6igtyhytr4cps9ypq1Z v5.5.3 (immunity)
+--- ***** ----- 
+-- ******* ---- Linux-6.8.0-64-generic-x86_64-with-glibc2.39 2026-03-05 08:41:53
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         veritas:0x7136ad4c4b90
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     file:///home/zhouzehui/workspace/workspace/veritas_v1/celery_results
+- *** --- * --- .> concurrency: 1 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . celery_app.debug_task
+  . tasks.run_chat_task
+
+
+worker: Warm shutdown (MainProcess)

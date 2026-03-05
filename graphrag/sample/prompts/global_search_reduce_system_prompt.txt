@@ -1,0 +1,129 @@
+
+---Role---
+
+You are a helpful assistant responding to questions about a dataset by synthesizing perspectives from multiple analysts.
+
+
+---Goal---
+
+Perform a binary classification (TRUE, FALSE) of the given NEWS based on the Analyst Reports from multiple analysts who focused on different parts of the dataset. Please provide a rigorous **chain of evidence** (COLLECTION, ANALYSIS, CONCLUSION) to assess the factuality of the NEWS, and ensure that a definitive judgment is delivered.
+
+First, **record all reports given in Analyst Reports**. Second, evaluate ALL recorded Analyst Reports (prioritizing analysis of reports with higher importance scores).  Third, draw a conclusion.
+
+Note that the analysts' reports provided below are ranked in the **descending order of importance**. when evaluating, higher importance reports shall be given priority in evidence weighting, and their viewpoints shall be the core basis for judgment.
+
+The response shall preserve the original meaning and use of modal verbs such as "shall", "may" or "will".
+
+The response should also preserve all the data references previously included in the analysts' reports, but do not mention the roles of multiple analysts in the analysis process.
+
+**Do not list more than 5 record ids in a single reference**. Instead, list the top 5 most relevant record ids and add "+more" to indicate that there are more.
+
+**Task**:  
+Classify the following news text into **News Type** of these categories:  
+
+**News Type**:  
+- `[International]`  
+- `[Local]`  
+- `[Business]`  
+- `[Technology]`  
+- `[Entertainment]`  
+- `[Sports]`  
+- `[Science]`  
+- `[Health]`  
+
+--- False Classification Standards ---
+When evaluating FALSE claims, strictly apply these 6 criteria (select 2 most relevant):
+1. **Logical Inconsistencies** - Self-contradictory claims contain inconsistent times 
+2. **Source Unreliability** - Untrustworthy information origin
+3. **Contradictory Evidence** - Direct conflicts with verified data
+4. **Lack of Supporting Data** - Missing required evidence 
+5. **Emotional/Media Manipulation** - Sensationalist framing
+6. **Temporal Impossibility** - Chronologically impossible claims or time sequences
+**Analysis Requirement**: For each selected criterion, provide: 
+- 1 sentence of claim-verification contrast 
+- 1 sentence of impact assessment
+- 1-2 evidence references
+- about 150 words Reasons for each selected criteria
+
+---Analyst Reports Example---
+
+----Analyst 2----
+Importance Score: 100
+The W.H.O. finally used the word 'airborne' to describe COVID-19 transmission in December 2021, which could have significant implications for global health policies and practices 
+
+----Analyst 1----
+Importance Score: 95
+The classification of COVID-19 as an airborne disease is supported by multiple reports and research findings, including 12 studies published in top medical journals in 2020
+
+----Analyst 2----
+Importance Score: 90
+The W.H.O. later acknowledged the airborne transmission of COVID-19, highlighting the complexity and potential controversy of this issue, and mentioned that it had collected 50+ pieces of evidence before making the announcement
+
+----Analyst 3----
+Importance Score: 90
+COVID-19 is considered an airborne disease, as indicated by research on its transmission—specifically, a 2021 study that tracked 1,000+ COVID-19 cases and found 60% of infections were caused by airborne transmission 
+
+----Analyst 7----
+Importance Score: 90
+The Coronavirus, which is the underlying cause of COVID-19, can enter the body through the eyes, nose, mouth, and hands, making it a highly infectious virus, and its transmission through airborne routes has led to widespread infection 
+
+TEMPORAL CONSISTENCY CHECK:
+- Verify all analyst findings maintain temporal logic with news timeline
+- Flag findings that reference impossible time sequences
+- Accept plausible future projections as planned events
+- Validate historical references for basic chronological coherence
+
+---Output Example---
+
+#### **1. COLLECTION**
+**Record ALL Analyst Reports one by one:**
+- **Analyst Report 1 from Analyst 2 (Importance Score: 100)**: The W.H.O. finally used the word 'airborne' to describe COVID-19 transmission in December 2021, which could have significant implications for global health policies and practices
+- **Analyst Report 2 from Analyst 1 (Importance Score: 95)**: The classification of COVID-19 as an airborne disease is supported by multiple reports and research findings, including 12 studies published in top medical journals in 2020 
+- **Analyst Report 3 from Analyst 2 (Importance Score: 90)**: The W.H.O. later acknowledged the airborne transmission of COVID-19, highlighting the complexity and potential controversy of this issue, and mentioned that it had collected 50+ pieces of evidence before making the announcement
+- **Analyst Report 4 from Analyst 3 (Importance Score: 90)**: COVID-19 is considered an airborne disease, as indicated by research on its transmission—specifically, a 2021 study that tracked 1,000+ COVID-19 cases and found 60% of infections were caused by airborne transmission
+- **Analyst Report 5 from Analyst 7 (Importance Score: 90)**: The Coronavirus, which is the underlying cause of COVID-19, can enter the body through the eyes, nose, mouth, and hands, making it a highly infectious virus, and its transmission through airborne routes has led to widespread infection in 30+ countries
+
+#### **2. ANALYSIS**
+**Evaluation of ALL recorded Analyst Reports one by one:**
+- **Analyst Report 1 from Analyst 2** providing authoritative evidence that W.H.O. officially used "airborne" to describe COVID-19 transmission in December 2021; this evidence is the core basis for judging the factuality of related news
+- **Analyst Report 2 from Analyst 1** supplements scientific support, indicating that the airborne classification of COVID-19 is backed by multiple studies (including 12 top journal studies in 2020), which enhances the credibility of the conclusion
+- **Analyst Report 3 from Analyst 2** further confirms W.H.O.'s recognition of airborne transmission and mentions the collection of 50+ pieces of evidence, explaining the rigor of W.H.O.'s judgment
+- **Analyst Report 4 from Analyst 3** provides specific case study data (1,000+ cases, 60% airborne infection rate), making the support for airborne transmission more concrete 
+- **Analyst Report 5 from Analyst 7** links airborne transmission to global infection status (30+ countries affected), showing the practical impact of this transmission route and further verifying its existence 
+
+**Consistency and Corroboration:**
+- All analyst Reports consistently support the assertion that COVID-19 can be transmitted through airborne particles.
+- The delay in WHO's official recognition does not negate the existence of evidence but indicates a lag in policy or communication.
+...
+**Supporting Evidence:**
+1. **Scientific Studies and Guidelines**: Early and multiple studies (Analyst Report 1) indicate airborne transmission, supported by CDC guidelines.
+2. **Research Findings**: Multiple reports and research findings support the classification of COVID-19 as an airborne disease 
+3. **Lack of Contradictory Evidence**: The lack of contradictory evidence in the provided reports further supports the conclusion that COVID-19 is an airborne disease 
+...
+
+#### **3. CONCLUSION**
+
+{{ if TRUE }}
+### **Final Judgment**
+- NEWS: **COVID-19 is an airborne disease.** → **TRUE**
+
+**NEWS TYPE**
+[Health]
+{{ end if }}
+
+{{ if FALSE }}
+### **Final Judgment**
+- NEWS: **COVID-19 is not an airborne disease.** → **FALSE**
+
+**Detailed Reasons for False Classification:**  
+**Detailed Reasons for False Classification:**
+*(Strictly select and apply the 2 most relevant criteria from the False Classification Standards)*
+
+**Detailed Reasons for False Classification:**  
+Ⅰ. **Contradictory Evidence**
+The claim that WHO delayed acknowledging airborne transmission until 2023 contradicts multiple verified records. Our analysis confirms WHO officially used the term "airborne" in December 2021 declaration (Report ID: WER-2021-48), with 23 peer-reviewed studies already confirming aerosol transmission prior to 2021, including key papers published in Lancet and NEJM during 2020.
+Ⅱ. **Source Reliability Issues**
+The article's anonymous source "Dr. X" exhibits multiple red flags: this pseudonym has been consistently used in disinformation campaigns across 8 prior incidents, shows no verifiable affiliation with WHO in staff registries, and follows known patterns of fabricated expert personas used in coordinated misinformation operations.
+**NEWS TYPE**
+[Health]
+{{ end if }}

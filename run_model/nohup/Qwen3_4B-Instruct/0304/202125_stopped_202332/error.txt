@@ -1,0 +1,38 @@
+[INFO:swift] Successfully registered `/home/zhouzehui/workspace/resource/swift0925/ms-swift/swift/llm/dataset/data/dataset_info.json`.
+[INFO:swift] rank: -1, local_rank: -1, world_size: 1, local_world_size: 1
+`torch_dtype` is deprecated! Use `dtype` instead!
+[INFO:swift] Setting torch_dtype: torch.bfloat16
+[INFO:swift] Setting args.lazy_tokenize: False
+[INFO:swift] args.result_path: /home/zhouzehui/workspace/workspace/veritas_v1/result/Qwen3-4B-Instruct-2507/deploy_result/20260304-202138.jsonl
+[INFO:swift] Global seed set to 42
+[INFO:swift] args: DeployArguments(model='/data/zhouzehui/models/Qwen/Qwen3-4B-Instruct-2507', model_type='qwen3_nothinking', model_revision=None, task_type='causal_lm', torch_dtype=torch.bfloat16, attn_impl=None, new_special_tokens=[], num_labels=None, problem_type='single_label_classification', rope_scaling=None, device_map=None, max_memory={}, max_model_len=32768, local_repo_path=None, init_strategy=None, template='qwen3_nothinking', system=None, max_length=262144, truncation_strategy='delete', max_pixels=None, agent_template=None, norm_bbox=None, use_chat_template=True, padding_free=False, padding_side='right', loss_scale='default', sequence_parallel_size=1, response_prefix=None, template_backend='swift', dataset=[], val_dataset=[], split_dataset_ratio=0.0, data_seed=42, dataset_num_proc=1, load_from_cache_file=False, dataset_shuffle=True, val_dataset_shuffle=False, streaming=False, interleave_prob=None, stopping_strategy='first_exhausted', shuffle_buffer_size=1000, download_mode='reuse_dataset_if_exists', columns={}, strict=False, remove_unused_columns=True, model_name=None, model_author=None, custom_dataset_info=[], quant_method=None, quant_bits=None, hqq_axis=None, bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_quant_type='nf4', bnb_4bit_use_double_quant=True, bnb_4bit_quant_storage=None, max_new_tokens=None, temperature=0.0, top_k=None, top_p=None, repetition_penalty=None, num_beams=1, stream=False, stop_words=[], logprobs=False, top_logprobs=None, ckpt_dir=None, lora_modules=[], tuner_backend='peft', train_type='lora', adapters=[], external_plugins=[], seed=42, model_kwargs={}, load_args=True, load_data_args=False, packing=False, packing_length=None, lazy_tokenize=False, cached_dataset=[], custom_register_path=[], use_hf=False, hub_token=None, ddp_timeout=18000000, ddp_backend=None, ignore_args_error=False, use_swift_lora=False, vllm_gpu_memory_utilization=0.4, vllm_tensor_parallel_size=1, vllm_pipeline_parallel_size=1, vllm_enable_expert_parallel=False, vllm_max_num_seqs=4, vllm_max_model_len=32768, vllm_disable_custom_all_reduce=True, vllm_enforce_eager=False, vllm_limit_mm_per_prompt={}, vllm_max_lora_rank=16, vllm_enable_prefix_caching=False, vllm_use_async_engine=True, vllm_quantization=None, vllm_reasoning_parser=None, vllm_disable_cascade_attn=False, vllm_data_parallel_size=1, gpu_memory_utilization=0.4, tensor_parallel_size=1, limit_mm_per_prompt=None, data_parallel_size=None, use_async_engine=None, sglang_tp_size=1, sglang_pp_size=1, sglang_dp_size=1, sglang_ep_size=1, sglang_enable_ep_moe=False, sglang_mem_fraction_static=None, sglang_context_length=None, sglang_disable_cuda_graph=False, sglang_quantization=None, sglang_kv_cache_dtype='auto', sglang_enable_dp_attention=False, sglang_disable_custom_all_reduce=True, lmdeploy_tp=1, lmdeploy_session_len=None, lmdeploy_cache_max_entry_count=0.8, lmdeploy_quant_policy=0, lmdeploy_vision_batch_size=1, merge_lora=False, safe_serialization=True, max_shard_size='5GB', infer_backend='vllm', result_path='/home/zhouzehui/workspace/workspace/veritas_v1/result/Qwen3-4B-Instruct-2507/deploy_result/20260304-202138.jsonl', write_batch_size=1000, metric=None, max_batch_size=1, val_dataset_sample=None, reranker_use_activation=True, host='127.0.0.1', port=8006, api_key=None, ssl_keyfile=None, ssl_certfile=None, owned_by='swift', served_model_name=None, verbose=True, log_interval=20, log_level='info', max_logprobs=20)
+[INFO:swift] default_system: None
+[INFO:swift] max_length: 262144
+[INFO:swift] response_prefix: ''
+[INFO:swift] agent_template: hermes
+[INFO:swift] Setting max_model_len: 32768
+The argument `trust_remote_code` is to be used with Auto classes. It has no effect here and is ignored.
+[INFO:swift] Successfully registered `/home/zhouzehui/workspace/resource/swift0925/ms-swift/swift/llm/dataset/data/dataset_info.json`.
+[W304 20:21:55.293868052 ProcessGroupNCCL.cpp:981] Warning: TORCH_NCCL_AVOID_RECORD_STREAMS is the default now, this environment variable is thus deprecated. (function operator())
+[1;36m(EngineCore_DP0 pid=2684183)[0;0m Loading safetensors checkpoint shards:   0% Completed | 0/3 [00:00<?, ?it/s]
+[1;36m(EngineCore_DP0 pid=2684183)[0;0m Loading safetensors checkpoint shards:  33% Completed | 1/3 [00:00<00:01,  1.47it/s]
+[1;36m(EngineCore_DP0 pid=2684183)[0;0m Loading safetensors checkpoint shards:  67% Completed | 2/3 [00:00<00:00,  2.67it/s]
+[1;36m(EngineCore_DP0 pid=2684183)[0;0m Loading safetensors checkpoint shards: 100% Completed | 3/3 [00:01<00:00,  1.98it/s]
+[1;36m(EngineCore_DP0 pid=2684183)[0;0m Loading safetensors checkpoint shards: 100% Completed | 3/3 [00:01<00:00,  2.00it/s]
+[1;36m(EngineCore_DP0 pid=2684183)[0;0m 
+[1;36m(EngineCore_DP0 pid=2684183)[0;0m Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/4 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  75%|███████▌  | 3/4 [00:00<00:00, 24.68it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 4/4 [00:00<00:00, 22.07it/s]
+[INFO:swift] Start time of running main: 2026-03-04 20:22:37.209099
+[INFO:swift] swift.__version__: 3.9.0.dev0
+[INFO:swift] model_list: ['Qwen3-4B-Instruct-2507']
+INFO:     Started server process [2684044]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8006 (Press CTRL+C to quit)
+[INFO:swift] {'num_prompt_tokens': 0, 'num_generated_tokens': 0, 'num_samples': 0, 'runtime': 20.08957757, 'samples/s': 0.0, 'tokens/s': 0.0}
+[INFO:swift] {'num_prompt_tokens': 0, 'num_generated_tokens': 0, 'num_samples': 0, 'runtime': 20.01980564, 'samples/s': 0.0, 'tokens/s': 0.0}
+INFO:     Shutting down
+[rank0]:[W304 20:23:30.309027710 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+INFO:     Waiting for application shutdown.
+[INFO:swift] {'num_prompt_tokens': 0, 'num_generated_tokens': 0, 'num_samples': 0, 'runtime': 13.41893479, 'samples/s': 0.0, 'tokens/s': 0.0}
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2684044]

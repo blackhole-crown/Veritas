@@ -1,0 +1,14 @@
+{
+  "global_callback_url": null,
+  "global_secret_key": null,
+  "callbacks": {},
+  "retry_policy": {
+    "max_attempts": 3,
+    "retry_delays": [
+      5,
+      30,
+      120
+    ],
+    "timeout": 30
+  }
+}
