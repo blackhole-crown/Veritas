@@ -1,0 +1,53 @@
+# Dockerfile.swift3（修改版）
+FROM nvidia/cuda:12.8.0-runtime-ubuntu24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 安装基础工具
+RUN apt-get update && apt-get install -y \
+    wget git build-essential curl vim tzdata \
+    && ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && dpkg-reconfigure --frontend noninteractive tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# 安装Miniconda
+RUN mkdir -p ~/miniconda3 && \
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh && \
+    bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 && \
+    rm -rf ~/miniconda3/miniconda.sh
+
+ENV PATH /root/miniconda3/bin:$PATH
+RUN echo 'source /root/miniconda3/etc/profile.d/conda.sh' >> ~/.bashrc
+
+# 接受 Anaconda 服务条款
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2
+
+# pip换源
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
+    pip config set global.trusted-host mirrors.tuna.tsinghua.edu.cn
+
+WORKDIR /app
+
+# 创建swift3环境
+RUN conda create -n swift3 python=3.11 -y
+
+# 复制ms-swift源码
+COPY resource/ms-swift /app/resource/ms-swift/
+
+# 安装ms-swift
+RUN /bin/bash -c "source /root/miniconda3/etc/profile.d/conda.sh && \
+    conda activate swift3 && \
+    cd /app/resource/ms-swift && \
+    pip install -e .[llm] && \
+    pip install vllm>=0.6.1"
+
+# 复制你的项目代码
+COPY swift2/ /app/swift2/
+COPY run_model/Qwen3-4B-Instruct/ /app/run_model/Qwen3-4B-Instruct/
+COPY utils/ /app/utils/
+COPY tasks.py /app/
+
+WORKDIR /app/run_model/Qwen3-4B-Instruct
+CMD ["/bin/bash"]

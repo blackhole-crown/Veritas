@@ -6,6 +6,8 @@ swift sft \
     --model AI-ModelScope/bert-base-chinese \
     --train_type lora \
     --dataset 'DAMO_NLP/jd:cls#2000' \
+    --load_from_cache_file true \
+    --split_dataset_ratio 0.01 \
     --torch_dtype bfloat16 \
     --num_train_epochs 1 \
     --per_device_train_batch_size 1 \
@@ -17,7 +19,7 @@ swift sft \
     --gradient_accumulation_steps 16 \
     --eval_steps 50 \
     --save_steps 50 \
-    --save_total_limit 5 \
+    --save_total_limit 2 \
     --logging_steps 5 \
     --max_length 512 \
     --truncation_strategy right \

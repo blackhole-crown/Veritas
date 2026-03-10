@@ -1,6 +1,6 @@
 # Copyright (c) Alibaba, Inc. and its affiliates.
 from types import MethodType
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import torch
 from transformers.dynamic_module_utils import get_class_from_dynamic_module
@@ -14,6 +14,7 @@ from ..patcher import patch_output_clone, patch_output_normalizer
 from ..register import (Model, ModelGroup, ModelMeta, get_model_tokenizer_multimodal,
                         get_model_tokenizer_with_flash_attn, register_model)
 from ..utils import ModelInfo, use_submodel_func
+from .qwen import patch_qwen_vl_utils
 
 logger = get_logger()
 
@@ -84,7 +85,7 @@ def get_model_tokenizer_molmoe(model_dir: str,
     if model is not None:
         model.config._to_dict = model.config.to_dict
         model.config.to_dict = MethodType(to_dict, model.config)
-
+        patch_output_clone(model.model.transformer.wte)
     return model, processor
 
 
@@ -114,8 +115,8 @@ def get_model_tokenizer_molmo(model_dir: str,
     model_cls = get_class_from_dynamic_module('modeling_molmo.MolmoForCausalLM', model_dir)
     model_cls._no_split_modules = ['MolmoSequentialBlock']
     model, processor = get_model_tokenizer_multimodal(model_dir, model_info, model_kwargs, load_model, **kwargs)
-
-    patch_output_clone(model.model.transformer.wte)
+    if model is not None:
+        patch_output_clone(model.model.transformer.wte)
     return model, processor
 
 
@@ -177,4 +178,91 @@ register_model(
         get_model_tokenizer_qwen2_vl,
         model_arch=ModelArch.qwen2_vl,
         architectures=['Qwen2VLForConditionalGeneration'],
+        tags=['vision']))
+
+
+def get_model_tokenizer_keye_vl(model_dir: str, *args, **kwargs):
+    model, processor = get_model_tokenizer_multimodal(model_dir, *args, **kwargs)
+    from keye_vl_utils import vision_process
+    global_vars = patch_qwen_vl_utils(vision_process)
+    processor.global_vars = global_vars
+    return model, processor
+
+
+register_model(
+    ModelMeta(
+        MLLMModelType.keye_vl,
+        [
+            ModelGroup([
+                Model('Kwai-Keye/Keye-VL-8B-Preview', 'Kwai-Keye/Keye-VL-8B-Preview'),
+            ]),
+        ],
+        TemplateType.keye_vl,
+        get_model_tokenizer_keye_vl,
+        model_arch=ModelArch.keye_vl,
+        architectures=['KeyeVLForConditionalGeneration'],
+        tags=['vision'],
+        requires=['keye_vl_utils'],
+    ))
+
+register_model(
+    ModelMeta(
+        MLLMModelType.keye_vl_1_5,
+        [
+            ModelGroup([
+                Model('Kwai-Keye/Keye-VL-1_5-8B', 'Kwai-Keye/Keye-VL-1_5-8B'),
+            ]),
+        ],
+        TemplateType.keye_vl_1_5,
+        get_model_tokenizer_keye_vl,
+        model_arch=ModelArch.keye_vl,
+        architectures=['KeyeVL1_5ForConditionalGeneration'],
+        tags=['vision'],
+        requires=['keye_vl_utils>=1.5.2'],
+    ))
+
+
+def get_model_tokenizer_dots_ocr(model_dir, *args, **kwargs):
+    model_cls = get_class_from_dynamic_module('modeling_dots_vision.DotsVisionTransformer', model_dir)
+    model_cls._no_split_modules = ['DotsVisionBlock']
+    model, processor = get_model_tokenizer_multimodal(model_dir, *args, **kwargs)
+    return model, processor
+
+
+register_model(
+    ModelMeta(
+        MLLMModelType.dots_ocr,
+        [ModelGroup([
+            Model('rednote-hilab/dots.ocr', 'rednote-hilab/dots.ocr'),
+        ])],
+        TemplateType.dots_ocr,
+        get_model_tokenizer_dots_ocr,
+        model_arch=ModelArch.dots_ocr,
+        architectures=['DotsOCRForCausalLM'],
+        requires=['transformers>=4.51.0'],
+    ))
+
+
+def get_model_tokenizer_sail2_vl(model_dir, *args, **kwargs):
+    model, processor = get_model_tokenizer_multimodal(model_dir, *args, **kwargs)
+    if model is not None:
+        use_submodel_func(model, 'language_model')
+    return model, processor
+
+
+register_model(
+    ModelMeta(
+        MLLMModelType.sail_vl2, [
+            ModelGroup([
+                Model('BytedanceDouyinContent/SAIL-VL2-2B', 'BytedanceDouyinContent/SAIL-VL2-2B'),
+                Model('BytedanceDouyinContent/SAIL-VL2-2B-Thinking', 'BytedanceDouyinContent/SAIL-VL2-2B-Thinking'),
+                Model('BytedanceDouyinContent/SAIL-VL2-8B', 'BytedanceDouyinContent/SAIL-VL2-8B'),
+                Model('BytedanceDouyinContent/SAIL-VL2-8B-Thinking', 'BytedanceDouyinContent/SAIL-VL2-8B-Thinking'),
+            ])
+        ],
+        TemplateType.sail_vl2,
+        get_model_tokenizer_sail2_vl,
+        model_arch=ModelArch.internvl,
+        architectures=['SAILVLModel'],
+        requires=['transformers<=4.51.3'],
         tags=['vision']))

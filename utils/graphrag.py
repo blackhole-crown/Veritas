@@ -7,6 +7,7 @@ import re
 import json
 from typing import List, Dict, Optional
 from . import utils
+import datatime
 
 dirs = [
     "swift2/my_inferencing/create_prompt_llm", 
@@ -188,7 +189,8 @@ def get_query_coe(news):
 #     Q = f"Now you should classify the following NEWS. Please provide a **chain of evidence** as above and give a clear judgment result (TRUE or FALSE, wrapped in **).\n\
 # NEWS: **{news}**"
 
-    Q = f"You are now required to classify the following NEWS. Please present a **chain of evidence** as outlined above, and provide a definitive judgment result (TRUE or FALSE, wrapped in **).\n\
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d")
+    Q = f"Publication date:{current_time}.You are now required to classify the following NEWS. Please present a **chain of evidence** as outlined above, and provide a definitive judgment result (TRUE or FALSE, wrapped in **).\n\
 NEWS: **{news}**"
     
     return Q

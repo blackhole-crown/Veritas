@@ -1,11 +1,13 @@
 # Copyright (c) Alibaba, Inc. and its affiliates.
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from argparse import ArgumentParser
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional, Type
 
 import torch.nn as nn
 from transformers import PretrainedConfig
 
-from swift.llm import MODEL_MAPPING, ModelGroup
+from swift.llm import MODEL_MAPPING
+from .model_provider import model_provider as model_provider_func
 
 MEGATRON_MODEL_MAPPING = {}
 
@@ -15,10 +17,16 @@ class MegatronModelMeta:
     megatron_model_type: str
     model_types: List[str]
 
-    model_provider: Callable[[], nn.Module]
-    convert_hf_config: Callable[[PretrainedConfig], Dict[str, Any]]
     convert_mcore2hf: Callable[[nn.Module, nn.Module], None]
     convert_hf2mcore: Callable[[nn.Module, nn.Module], None]
+
+    model_cls: Type[nn.Module]
+    convert_hf_config: Callable[[PretrainedConfig], Dict[str, Any]]
+    get_transformer_layer_spec: Optional[Callable] = None
+    model_provider: Callable[[], nn.Module] = model_provider_func
+    visual_cls: Optional[Type[nn.Module]] = None
+
+    extra_args_provider: Optional[Callable[[ArgumentParser], ArgumentParser]] = None
 
 
 def register_megatron_model(megatron_model_meta: MegatronModelMeta, *, exist_ok: bool = False):
@@ -42,4 +50,6 @@ def get_megatron_model_meta(model_type: str) -> Optional[MegatronModelMeta]:
         for k, megatron_model_meta in MEGATRON_MODEL_MAPPING.items():
             for _model_type in megatron_model_meta.model_types:
                 _MODEL_META_MAPPING[_model_type] = k
+    if model_type not in _MODEL_META_MAPPING:
+        return
     return MEGATRON_MODEL_MAPPING[_MODEL_META_MAPPING[model_type]]

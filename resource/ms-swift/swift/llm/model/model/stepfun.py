@@ -8,6 +8,7 @@ from transformers import AutoModel
 from swift.llm import TemplateType
 from ..constant import MLLMModelType
 from ..model_arch import ModelArch
+from ..patcher import patch_output_clone
 from ..register import (Model, ModelGroup, ModelMeta, get_model_tokenizer_multimodal,
                         get_model_tokenizer_with_flash_attn, register_model)
 from ..utils import git_clone_github, safe_snapshot_download
@@ -35,7 +36,7 @@ register_model(
 
 def get_model_tokenizer_got_ocr2_hf(model_dir, *args, **kwargs):
     from transformers.models.got_ocr2 import GotOcr2ForConditionalGeneration
-    GotOcr2ForConditionalGeneration._no_split_modules.append('GotOcr2VisionLayer')
+    GotOcr2ForConditionalGeneration._no_split_modules = ['GotOcr2VisionLayer']
     model, processor = get_model_tokenizer_multimodal(model_dir, *args, **kwargs)
     return model, processor
 
@@ -49,7 +50,7 @@ register_model(
         ],
         TemplateType.got_ocr2_hf,
         get_model_tokenizer_got_ocr2_hf,
-        model_arch=ModelArch.got_ocr2_hf,
+        model_arch=ModelArch.llava_hf,
         architectures=['GOTQwenForCausalLM'],
         tags=['vision']))
 
@@ -71,6 +72,27 @@ def get_model_tokenizer_step_audio(*args, **kwargs):
         # model.decoder = StepAudioTTS(decoder_path, model.encoder)
     return model, tokenizer
 
+
+def get_model_tokenizer_step_audio2_mini(*args, **kwargs):
+    model, tokenizer = get_model_tokenizer_with_flash_attn(*args, **kwargs)
+    if model is not None:
+        patch_output_clone(model.model.embed_tokens)
+    return model, tokenizer
+
+
+register_model(
+    ModelMeta(
+        MLLMModelType.step_audio2_mini,
+        [ModelGroup([
+            Model('stepfun-ai/Step-Audio-2-mini', 'stepfun-ai/Step-Audio-2-mini'),
+        ])],
+        TemplateType.step_audio2_mini,
+        get_model_tokenizer_step_audio2_mini,
+        model_arch=ModelArch.step_audio2_mini,
+        architectures=['StepAudio2ForCausalLM'],
+        requires=['transformers==4.53.3', 'torchaudio', 'librosa'],
+        tags=['audio'],
+    ))
 
 register_model(
     ModelMeta(

@@ -1,11 +1,14 @@
 # Copyright (c) Alibaba, Inc. and its affiliates.
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import torch
 from peft import IA3Config, PeftModel, get_peft_model
 
-from swift.llm import MODEL_ARCH_MAPPING, ModelKeys
+from swift.llm import ModelKeys
 from swift.utils import find_all_linears
+
+if TYPE_CHECKING:
+    from swift.llm import TrainArguments
 
 
 class Tuner:
@@ -75,7 +78,7 @@ class IA3(PeftTuner):
 
     @staticmethod
     def prepare_model(args: 'TrainArguments', model: torch.nn.Module) -> torch.nn.Module:
-        model_arch: ModelKeys = MODEL_ARCH_MAPPING[model.model_meta.model_arch]
+        model_arch: ModelKeys = model.model_meta.model_arch
         ia3_config = IA3Config(
             target_modules=find_all_linears(model), feedforward_modules='.*' + model_arch.mlp.split('{}.')[1] + '.*')
         return get_peft_model(model, ia3_config)

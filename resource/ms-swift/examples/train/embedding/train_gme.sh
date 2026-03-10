@@ -8,6 +8,8 @@ swift sft \
     --model iic/gme-Qwen2-VL-2B-Instruct \
     --train_type lora \
     --dataset 'swift/TextCaps:emb' \
+    --load_from_cache_file true \
+    --split_dataset_ratio 0.01 \
     --torch_dtype bfloat16 \
     --num_train_epochs 1 \
     --per_device_train_batch_size 2 \
@@ -16,7 +18,7 @@ swift sft \
     --eval_steps 100 \
     --save_steps 100 \
     --eval_strategy steps \
-    --save_total_limit 5 \
+    --save_total_limit 2 \
     --logging_steps 5 \
     --output_dir output \
     --lazy_tokenize true \

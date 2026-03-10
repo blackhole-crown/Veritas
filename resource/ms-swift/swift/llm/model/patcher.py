@@ -1,4 +1,6 @@
 # Copyright (c) Alibaba, Inc. and its affiliates.
+import copy
+import os
 from contextlib import contextmanager
 from functools import wraps
 from types import MethodType
@@ -7,18 +9,17 @@ from typing import Dict, List, Optional, Union
 import accelerate
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import transformers
 from accelerate.utils import find_device
+from packaging import version
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from torch.nn.parallel import DistributedDataParallel as DDP
 from transformers import PreTrainedModel, dynamic_module_utils, trainer
 from transformers.modeling_outputs import SequenceClassifierOutputWithPast
 
-from swift.llm import to_device, to_float_dtype
-from swift.utils import get_dist_setting, get_logger, is_mp_ddp, safe_ddp_context, use_torchacc
+from swift.llm import deep_getattr, to_device, to_float_dtype
+from swift.utils import get_dist_setting, get_logger, is_mp, is_mp_ddp, safe_ddp_context
 from swift.utils.torch_utils import _get_max_memory, _sync_max_memory, get_device_count
-from .model_arch import get_model_arch
 from .utils import HfConfigFactory
 
 logger = get_logger()
@@ -59,20 +60,21 @@ def patch_output_clone(module: torch.nn.Module):
     module.register_forward_hook(_clone_hook)
 
 
+def patch_get_input_embeddings(model, embedding_keys: str):
+
+    def get_input_embeddings(self) -> nn.Module:
+        return deep_getattr(model, embedding_keys)
+
+    model.get_input_embeddings = MethodType(get_input_embeddings, model)
+
+
 def patch_output_normalizer(module: torch.nn.Module, model_meta):
 
     def lm_head_forward(self, hidden_states):
         return hidden_states
 
     lm_heads = ['lm_head', 'output', 'embed_out', 'output_layer']
-    llm_prefix = getattr(get_model_arch(model_meta.model_arch), 'language_model', None)
-    if llm_prefix:
-        llm_model = getattr(module, llm_prefix[0])
-    else:
-        llm_model = module
-
-    if 'CausalLM' not in llm_model.__class__.__name__:
-        llm_model = module
+    llm_model = get_lm_head_model(module, model_meta=model_meta)
 
     found = False
     for lm_head in lm_heads:
@@ -83,10 +85,9 @@ def patch_output_normalizer(module: torch.nn.Module, model_meta):
 
     assert found, 'Cannot find the proper lm_head name'
 
-    def forward(self, input_ids: torch.LongTensor = None, attention_mask=None, *args, **kwargs):
-
-        outputs = self.forward_origin(input_ids=input_ids, attention_mask=attention_mask, *args, **kwargs)
-        hidden_states = outputs.logits
+    def _output_embedding_hook(module, args, kwargs, output):
+        attention_mask = kwargs['attention_mask']
+        hidden_states = output.logits
         left_padding = (attention_mask[:, -1].sum() == attention_mask.shape[0])
         if left_padding:
             embeddings = hidden_states[:, -1]
@@ -100,8 +101,7 @@ def patch_output_normalizer(module: torch.nn.Module, model_meta):
             'last_hidden_state': embeddings.contiguous(),
         }
 
-    llm_model.forward_origin = llm_model.forward
-    llm_model.forward = MethodType(forward, llm_model)
+    llm_model.register_forward_hook(_output_embedding_hook, with_kwargs=True)
 
 
 def patch_output_to_input_device(module: torch.nn.Module):
@@ -150,18 +150,29 @@ def patch_ignore_check_imports():
         td.check_imports = _old_check_imports
 
 
+def get_lm_head_model(model, model_meta=None, lm_heads=None):
+    model_meta = model_meta or model.model_meta
+    lm_heads = lm_heads or ['lm_head']
+    llm_prefix_list = getattr(model_meta.model_arch, 'language_model', None)
+    prefix_list = []
+    if llm_prefix_list:
+        prefix_list = llm_prefix_list[0].split('.')
+
+    current_model = model
+    for prefix in prefix_list:
+        current_model = getattr(current_model, prefix)
+        for lm_head in lm_heads:
+            if hasattr(current_model, lm_head):
+                return current_model
+    return model
+
+
 def _patch_sequence_classification(model, model_meta):
     hidden_size = HfConfigFactory.get_config_attr(model.config, 'hidden_size')
     initializer_range = HfConfigFactory.get_config_attr(model.config, 'initializer_range')
 
     lm_heads = ['lm_head', 'output', 'embed_out', 'output_layer']
-    llm_prefix = getattr(get_model_arch(model_meta.model_arch), 'language_model', None)
-    if llm_prefix:
-        llm_model = getattr(model, llm_prefix[0])
-    else:
-        llm_model = model
-    if 'CausalLM' not in llm_model.__class__.__name__:  # fix qwen2_vl
-        llm_model = model
+    llm_model = get_lm_head_model(model, model_meta, lm_heads)
     llm_model.num_labels = model.config.num_labels
     llm_model.score = nn.Linear(hidden_size, llm_model.num_labels, bias=False, dtype=llm_model.dtype)
     if llm_model.score.weight.device == torch.device('meta'):
@@ -244,36 +255,106 @@ def _patch_sequence_classification(model, model_meta):
 
 
 @contextmanager
-def patch_automodel_for_sequence_classification(model_meta):
+def patch_automodel_for_sequence_classification(model_info=None,
+                                                model_meta=None,
+                                                patch_from_pretrained=True,
+                                                patch_missing_init=True,
+                                                **kwargs):
+    """
+    Context manager for patching AutoModel sequence classification.
+
+    Args:
+        model_info: Model information
+        model_meta: Model metadata
+        patch_from_pretrained (bool): Whether to patch PreTrainedModel.from_pretrained
+        patch_missing_init (bool): Whether to patch missing __init__ methods
+        **kwargs: Additional keyword arguments
+    """
+    model_config = kwargs.get('model_config', None)
     from_pretrained = PreTrainedModel.from_pretrained.__func__
 
-    @classmethod
-    def _new_from_pretrained(cls, *args, **kwargs):
-        cls_name = cls.__name__
-        cls_name = cls_name.split('For', 1)[0]
-        cls_name += 'ForSequenceClassification'
-        cls = type(cls_name, (cls, ), {})  # new_cls
-        __init__ = cls.__init__
+    # Patch 1: from_pretrained method
+    _new_from_pretrained = None
+    if patch_from_pretrained:
 
-        def __new_init__(self, *args, **kwargs):
-            __init__(self, *args, **kwargs)
-            _patch_sequence_classification(self, model_meta)
+        @classmethod
+        def _new_from_pretrained(cls, *args, **kwargs):
+            __init__ = cls.__init__
 
-        cls.__init__ = __new_init__
-        res = from_pretrained(cls, *args, **kwargs)
-        cls.__init__ = __init__
-        return res
+            def __new_init__(self, *args, **kwargs):
+                __init__(self, *args, **kwargs)
+                _patch_sequence_classification(self, model_meta)
 
-    PreTrainedModel.from_pretrained = _new_from_pretrained
+            cls.__init__ = __new_init__
+            if hasattr(cls, '_tp_plan'):  # fix tp_plan
+                cls._tp_plan = cls._tp_plan or {}
+            res = from_pretrained(cls, *args, **kwargs)
+            cls.__init__ = __init__
+            return res
+
+    # Patch 2: missing __init__ methods
+    # https://github.com/modelscope/ms-swift/pull/5820
+    patched_classes = []
+    if patch_missing_init:
+
+        def get_all_subclasses(cls, include_root=True):
+            subclass_list = []
+
+            def recurse(cl):
+                for subclass in cl.__subclasses__():
+                    subclass_list.append(subclass)
+                    recurse(subclass)
+
+            recurse(cls)
+
+            ret = set(subclass_list)
+            if include_root:
+                ret.add(cls)
+            return ret
+
+        def create_default_init(cls):
+            """Create a default __init__ method that calls super().__init__"""
+
+            def default_init(self, *args, **kwargs):
+                super(cls, self).__init__(*args, **kwargs)
+
+            return default_init
+
+        if model_config is not None:
+            # we should import in advance so that get_all_subclasses can find the class
+            archs = model_config.architectures
+            for arch in archs:
+                try:
+                    getattr(transformers, arch)
+                except AttributeError:
+                    continue
+
+        for subclass in get_all_subclasses(torch.nn.modules.module.Module):
+            if '__init__' not in subclass.__dict__:
+                subclass.__init__ = create_default_init(subclass)
+                patched_classes.append(subclass)
+
+    if patch_from_pretrained:
+        PreTrainedModel.from_pretrained = _new_from_pretrained
 
     try:
         yield
     finally:
-        PreTrainedModel.from_pretrained = classmethod(from_pretrained)
+        # Restore patches
+        if patch_from_pretrained:
+            PreTrainedModel.from_pretrained = classmethod(from_pretrained)
+
+        if patch_missing_init:
+            for subclass in patched_classes:
+                try:
+                    if '__init__' in subclass.__dict__:
+                        del subclass.__init__
+                except (AttributeError, TypeError):
+                    pass
 
 
 @contextmanager
-def patch_automodel(automodel_class, model_info):
+def patch_automodel(model_info, model_meta, automodel_class, return_dummy_model, **kwargs):
     from_pretrained = PreTrainedModel.from_pretrained.__func__
 
     @classmethod
@@ -282,7 +363,16 @@ def patch_automodel(automodel_class, model_info):
             kwargs.pop('use_cache', None)
         if model_info.quant_method == 'gptq':
             cls.main_input_name = 'input_ids'
-        return from_pretrained(cls, *args, **kwargs)
+        if hasattr(cls, '_tp_plan'):  # fix tp_plan
+            cls._tp_plan = cls._tp_plan or {}
+        if return_dummy_model:
+            origin_torch_dtype = torch.get_default_dtype()
+            torch.set_default_dtype(kwargs['config'].torch_dtype)
+            model = cls(copy.deepcopy(kwargs['config']))
+            torch.set_default_dtype(origin_torch_dtype)
+        else:
+            model = from_pretrained(cls, *args, **kwargs)
+        return model
 
     PreTrainedModel.from_pretrained = _new_from_pretrained
 
@@ -301,8 +391,10 @@ def patch_mp_ddp():
     This should be called before any training starts.
     """
     global _mp_ddp_patched
-    if is_mp_ddp() and not _mp_ddp_patched:
-        _mp_ddp_patched = True
+    if _mp_ddp_patched:
+        return
+    _mp_ddp_patched = True
+    if is_mp_ddp():
         from accelerate.utils.modeling import get_balanced_memory, infer_auto_device_map
 
         @wraps(infer_auto_device_map)
@@ -324,10 +416,9 @@ def patch_mp_ddp():
         _old_ddp_init = DDP.__init__
         accelerate.accelerator.torch.nn.parallel.DistributedDataParallel.__init__ = (
             lambda self, model, device_ids, output_device, *args, **kwargs: _old_ddp_init(self, model, *args, **kwargs))
-        transformers.modeling_utils.get_balanced_memory = lambda *args, **kwargs: None
+        transformers.modeling_utils.get_balanced_memory = lambda *args, **kwargs: {}
         transformers.modeling_utils.infer_auto_device_map = _infer_auto_device_map_patch
 
-    if is_mp_ddp() or use_torchacc():
         _old_accelerator_init = trainer.Accelerator.__init__
         trainer.Accelerator.__init__ = (lambda self, device_placement=False, *args, **kwargs: _old_accelerator_init(
             self, device_placement=device_placement, *args, **kwargs))
@@ -347,3 +438,32 @@ def patch_get_dynamic_module():
         yield
     finally:
         dynamic_module_utils.get_cached_module_file = origin_get_cached_module_file
+
+
+@contextmanager
+def patch_tp_plan(load_model: bool):
+    if not load_model or not is_mp() or version.parse(
+            transformers.__version__) < version.parse('4.50') or 'WORLD_SIZE' not in os.environ:
+        yield
+        return
+    logger.info('Patch tp_plan.')
+    WORLD_SIZE = os.environ.get('WORLD_SIZE')
+    os.environ['_PATCH_WORLD_SIZE'] = WORLD_SIZE
+    os.environ.pop('WORLD_SIZE')
+    yield
+    os.environ['WORLD_SIZE'] = WORLD_SIZE
+
+
+@contextmanager
+def patch_attach_align_device_hook_on_blocks():
+    from accelerate import big_modeling
+    origin_attach_align_device_hook_on_blocks = big_modeling.attach_align_device_hook_on_blocks
+
+    def attach_align_device_hook_on_blocks(*args, **kwargs):
+        return
+
+    big_modeling.attach_align_device_hook_on_blocks = attach_align_device_hook_on_blocks
+    try:
+        yield
+    finally:
+        big_modeling.attach_align_device_hook_on_blocks = origin_attach_align_device_hook_on_blocks
