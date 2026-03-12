@@ -1,192 +1,350 @@
-# -*- coding: utf-8 -*-
+import os
+import shutil
+import subprocess
 import sys
+import pandas as pd
+import re
 import json
-from typing import Dict, Union
-dirs = ["../swift2/my_inferencing"] 
+from typing import List, Dict, Optional
+from . import utils
+import datetime
+
+dirs = [
+    "swift2/my_inferencing/create_prompt_llm", 
+    "swift2/my_inferencing"]  
 for _dir in dirs:
     if _dir not in sys.path:
         sys.path.append(_dir)
-from . import utils
-# 在文件开头添加
-import logging
 
-# 禁用pydoll的INFO级别日志
-logging.getLogger("pydoll").setLevel(logging.WARNING)
-logging.getLogger("pydoll.connection").setLevel(logging.WARNING)
-logging.getLogger("pydoll.browser").setLevel(logging.WARNING)
-# import add_date
-from datetime import datetime
-import os, time
-import re
-import requests
-import http.client
-http.client.HTTPConnection._http_vsn = 10
-http.client.HTTPConnection._http_vsn_str = 'HTTP/1.0'
+import prompt_rag
 
-from requests.adapters import HTTPAdapter
-s = requests.Session()
-
-# 导入同花顺爬虫模块
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
-
-try:
-    from ths_crawler_v2 import get_ths_search_result
-except ImportError as e:
-    print(f"导入ths_crawler_v2失败: {e}")
-    # 如果导入失败，尝试相对导入
-    try:
-        from .ths_crawler_v2 import get_ths_search_result
-    except ImportError:
-        print("无法导入同花顺爬虫模块")
-        get_ths_search_result = None
-
-
-max_retries = 10
-s.mount('http://', HTTPAdapter(max_retries=max_retries))
-s.mount('https://', HTTPAdapter(max_retries=max_retries))
-
-
-
-def remove_quotation_marks(claim: str):
-    """删除双引号"""
-    return claim.strip().replace("“", "").replace("”", "").replace("\"", "").replace("NOT", "not")
-
-def __get_web_result(query, count=10):
-    """
-    使用同花顺爬虫获取网页结果（替换原来的Brave API调用）
-    """
-    # 检查爬虫模块是否可用
-    if get_ths_search_result is None:
-        print("错误：同花顺爬虫模块不可用")
-        # 返回空的Brave API格式结果
-        return {
-            'type': 'search',
-            'query': {
-                'original': query,
-                'show_strict_warning': False,
-                'is_navigational': False,
-                'is_news_breaking': False,
-                'spellcheck_off': False,
-                'country': 'cn',
-                'bad_results': False,
-                'should_fallback': False,
-                'postal_code': '',
-                'city': '',
-                'header_country': '',
-                'more_results_available': False,
-                'state': ''
-            },
-            'web': {
-                'type': 'search',
-                'results': [],
-                'family_friendly': True
-            }
-        }
+class DataTableKey:
+    entities = "Entities"
+    relationships = "Relationships"
+    documents = "Documents"
+    text_units = "Text Units"
+    communities = "Communities"
+    community_reports = "Community Reports"
+    # covariates = "Covariates"
     
-    try:
-        # print(f"使用同花顺爬虫搜索: {query}，数量: {count}")
-        # 注意这里要传递count参数
-        result = get_ths_search_result(query, count)
-        # print(f"爬虫返回 {len(result.get('web', {}).get('results', []))} 个结果")
-        return result
-    except Exception as e:
-        print(f"同花顺爬虫执行出错: {e}")
-        import traceback
-        print(traceback.format_exc())
-        # 返回空结果
-        return {
-            'type': 'search',
-            'query': {'original': query, 'more_results_available': False},
-            'web': {'results': []}
-        }
+query_methond = 'local'  # 这里是选择graph的查询方法  local / global
+root_dir = f'graphrag/sample' 
+def get_outputs_dir(K):
+    outputs_dir = f'./.cache/graphrag/outputs_k={K}'
+    return outputs_dir
+contexts_dir = os.path.join(root_dir, 'input', 'contexts.txt')
+output_dir = os.path.join(root_dir, 'output')
 
-search_engine = "ths"
-
-
-
-
-
-def get_brave_search(news, query_date, K):
+def init_graph():
     """
-    返回：search_res, news_id, last_output
+    这就是删除output文件的函数
     """
-    assert utils.DATE_THRESHOLD >= 1, 'DATE_THRESHOLD neads to >= 1'
-    news = news.strip()
-    news_item = utils.get_news_item(news)
-    query_history = news_item["history"][f"k={K}"]
-    
-    add_news_to_jsonl(news_item,news)    # 这个是加入claim到jsonl文件
-    
-    if len(query_history) == 0:
-        search_res = __get_web_result(remove_quotation_marks(news))
-        utils.add_search(
-            {"id": news_item["id"], f"{search_engine}_search_results": search_res})
+    cache_dir = os.path.join(root_dir, 'cache')
+    logs_dir = os.path.join(root_dir, 'logs')
+    input_dir = os.path.join(root_dir, 'input')
 
-        return search_res, news_item["id"], None
+    utils.delete_txt_files(input_dir)
+
+    if os.path.exists(cache_dir):
+        shutil.rmtree(cache_dir)
+
+    if os.path.exists(logs_dir):
+        shutil.rmtree(logs_dir)
+
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+
+def try_load_output(news_id, K, last_output):
+    if os.path.exists(get_outputs_dir(K) + f'/output_{news_id}') and last_output is not None:
+        shutil.copytree(get_outputs_dir(K) + f'/output_{news_id}', root_dir + '/output')
+        return True
     else:
-        if utils.is_within_days(
-            query_date, query_history[-1]["Date"], utils.DATE_THRESHOLD):
+        return False
 
-            return None, news_item["id"], news_item["last_output"][f"k={K}"]
-        else:
-            search_res = __get_web_result(remove_quotation_marks(news))
-            utils.update_search(news_item["id"], search_engine, search_res)
-            return search_res, news_item["id"], None
-
-
-def add_news_to_jsonl(news_item, news, file_path: str = ".cache/brave/related_news.jsonl"):
-    """
-    将新闻条目添加到JSONL文件
+def build_graph(search_res, news_id, K, last_output, split_contexts):           #search_res: 搜索结果（列表） news_id: 当前处理新闻的唯一标识符。K: 从搜索结果中提取的上下文数量。last_output: 上一次的输出结果，判断是否需要重新构建图。split_contexts: 布尔值，指示是否将上下文拆分为多个部分
     
-    参数:
-    news_item (dict): 包含新闻数据的字典，必须有"id"键
-    news (str): 新闻内容
-    file_path (str): JSONL文件的路径
+    init_graph()
+    all_records = [] # 记录每次搜索结果
+    if last_output is None:
+        
+        
+        snippet = prompt_rag.get_brave_snippet(
+            search_res, ids=slice(0, K),
+            ret_type = 'list' if split_contexts else 'str',
+            # max_len=100
+        )
+
+        # 导入contexts,这里是把爬起到的相关新闻放到input文件夹的代码
+        # 可以直接在这里修改，把相关新闻插入到那个relevant_news里面，再通过那边写入数据库
+        # 现在问题是需要把爬取到的新闻的url也存储
+        # 这里把爬取的列表的信息写入文件，我直接在这里把这些信息写到related_news里面
+        if isinstance(snippet, list):
+            snippet = [re.sub(r"^Information \d+:","", context, count=1).strip() for context in snippet]
+            url = "\n"+"url:"+""
+            title = ""
+            for i, context in enumerate(snippet):
+                try:
+        # 提取标题内容
+                    url ="url:"+ "\n" + search_res["web"]["results"][i]["url"]
+                    url = re.sub(r'^url:', '', url).strip()
+                    url = "\n" + url
+                    title_match = re.search(r"Title: (.*)", context)
+                    if title_match:
+                    # 动态创建title_{i}变量并赋值
+                        title = title_match.group(1)
+                    # 打印提取的标题            
+                except (IndexError, KeyError):
+                    pass
+                
+                record = {'id':i+1,'title': title, 'url': url.replace("\n", "")}
+                all_records.append(record)
+                
+                with open(os.path.join(
+                    root_dir, 'input', f'context_{i+1}.txt'), 'w', encoding='utf-8') as file:
+                    file.write(context + url)
+        else:
+            with open(contexts_dir, 'w', encoding='utf-8') as file:
+                file.write(snippet)
+
+        write_records_to_jsonl(all_records,news_id)
+        
+
+    if not try_load_output(news_id, K, last_output):
+        subprocess.run([
+            'graphrag', 'index', 
+            '--root', root_dir], capture_output=True, text=True)
+    
+    return get_data_table()
+
+
+    
+
+def get_data_table():               
+    data_table = {}                
+    # 初始化一个空字典 data_table                                   
+    # 加载 graphrag/sample/output/xx.parquet 文件，删除 id 列，并存储到 data_table 中，键为 DataTableKey.xx
+    # 这里需要修改，因为文件变了
+    
+    
+    data_table[DataTableKey.community_reports] = pd.read_parquet(
+        os.path.join(output_dir, 'community_reports.parquet')).drop(columns=["id"])
+    data_table[DataTableKey.entities] = pd.read_parquet(
+        os.path.join(output_dir, 'entities.parquet')).drop(columns=["id"])
+    data_table[DataTableKey.relationships] = pd.read_parquet(
+        os.path.join(output_dir, 'relationships.parquet')).drop(columns=["id"])
+    data_table[DataTableKey.documents] = pd.read_parquet(
+        os.path.join(output_dir, 'documents.parquet')).drop(columns=["id"])
+    data_table[DataTableKey.text_units] = pd.read_parquet(
+        os.path.join(output_dir, 'text_units.parquet')).drop(columns=["id"])
+    # try:
+    #     data_table[DataTableKey.community_reports] = pd.read_parquet("community_reports.parquet")
+    # except FileNotFoundError:
+    #     logger.warning("社区报告文件未找到，使用空 DataFrame 替代")
+    data_table[DataTableKey.community_reports] = pd.DataFrame()  # 默认值
+    data_table[DataTableKey.communities] = pd.read_parquet(
+            os.path.join(output_dir, 'communities.parquet')).drop(columns=["id"])
+
+
+    
+    ## data_table[DataTableKey.covariates] = pd.read_parquet(
+    ##     os.path.join(output_dir, 'create_final_covariates.parquet'))
+    # 初始化一个空字典 data_table。
+    # 从指定的输出目录（output_dir）加载多个 Parquet 文件，分别对应不同类型的数据表。
+    # 对每个加载的数据表，删除 id 列。
+    # 将加载后的数据表存储到字典中，以 DataTableKey 的枚举值作为键
+    return data_table
+
+def get_data_table_init():          #初始化一个数据表字典
+    data_table = {
+        DataTableKey.community_reports: pd.DataFrame(),     # community_reports: 社区报告相关的数据表
+        DataTableKey.entities: pd.DataFrame(),              # entities: 识别的实体数据表。
+        DataTableKey.relationships: pd.DataFrame(),         # relationships: 实体之间关系的数据表。
+        DataTableKey.documents: pd.DataFrame(),             # documents: 文档相关的数据表。
+        DataTableKey.text_units: pd.DataFrame(),            # text_units: 文本单元（如段落、句子等）相关的数据表。
+        DataTableKey.communities: pd.DataFrame(),           # communities: 社区相关的数据表。
+    }
+    # 键 是 DataTableKey 类中的各种枚举值或常量
+    # 值 是每个键对应的空 pandas.DataFrame()，表示初始化时这些数据表为空
+    return data_table
+
+def save_graph(_id, K):
+
+    if os.path.exists(get_outputs_dir(K) + f'/output_{_id}'):
+        shutil.rmtree(get_outputs_dir(K) + f'/output_{_id}')
+
+    os.rename(output_dir, output_dir + f'_{_id}')
+    shutil.move(output_dir + f'_{_id}', get_outputs_dir(K))
+
+def get_answer(output_raw, query_methond):
+    #     output_raw: 外部命令的原始输出（字符串格式），可能包含所需答案的文本。
+    #     query_methond: 查询方法，决定如何解析 output_raw，支持不同的解析逻辑（例如 "local" 或 "global"）
+    if query_methond == "local":
+        return output_raw[output_raw.find('Local Search Response:') + len('Local Search Response:'):].strip()
+    elif query_methond == "global":
+        return output_raw[output_raw.find('Global Search Response:') + len('Global Search Response:'):].strip()
+    else:
+        raise Exception("Error search method!")
+
+def get_query_coe(news):
+#     Q = f"Now you should classify the following NEWS. Please provide a **chain of evidence** as above and give a clear judgment result (TRUE or FALSE, wrapped in **).\n\
+# NEWS: **{news}**"
+
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d")
+    Q = (
+        f"Current query date: {current_time}.\n"
+        f"Publication date: {current_time}.\n\n"
+        f"You are now required to classify the following NEWS.\n\n"
+        f"CRITICAL INSTRUCTION - Read this before analysis:\n"
+        f"1. You MUST use the external knowledge provided in the "
+        f"context_data/Analyst Reports as your PRIMARY evidence source.\n"
+        f"2. For each claim in the news, explicitly compare it against "
+        f"the retrieved external knowledge.\n"
+        f"3. If the external knowledge contains data that matches or "
+        f"contradicts the news, cite it directly with [Data: Sources (id)].\n"
+        f"4. Your training knowledge is SECONDARY and must be labeled "
+        f"[LLM: verify] if used.\n"
+        f"5. If no relevant external knowledge is retrieved, state "
+        f"'No external data available for this claim' rather than "
+        f"using training knowledge as evidence.\n\n"
+        f"Please present a **chain of evidence** as outlined above, "
+        f"and provide a definitive judgment result "
+        f"(TRUE or FALSE, wrapped in **).\n"
+        f"NEWS: **{news}**"
+    )
+    
+    return Q
+
+def get_COE(news, news_id, K, last_output):
+    if last_output is not None:
+        return last_output    
+    # news: 当前新闻或用户输入的查询内容。
+    # news_id: 与当前新闻或查询相关的唯一标识符。
+    # K: 可能表示搜索的上下文数量或其他限制条件。
+    # last_output: 上一次生成的输出，若存在则直接使用，避免重复计算。
+    else:
+        result = subprocess.run([            # 使用 subprocess.run 执行外部命令，用于查询或构建证据链
+            'graphrag', 'query',             # 'graphrag', 'query': 执行 graphrag 工具中的 query 命令。
+            '--root', root_dir,              # '--root', root_dir: 指定根目录 root_dir，可能是存储图数据的位置。
+            '--method', query_methond,       # '--method', query_methond: 指定查询方法，变量 query_methond 定义了具体的查询策略。
+            '--query', get_query_coe(news)], # '--query', get_query_coe(news): 使用 get_query_coe(news) 函数生成查询字符串。
+            capture_output=True, text=True)  # 结果存储在 result 变量中
+        
+        save_graph(news_id, K)                              #调用 save_graph 函数，保存与新闻 ID 和上下文限制 K 相关的图数据
+        
+        return get_answer(result.stdout, query_methond)     #调用 get_answer 函数，解析 result.stdout（即外部命令的标准输出）并生成最终的证据链答案
+    
+
+def parse_context_file(file_path: str) -> Dict[str, str]:
+    """解析context.txt文件内容"""
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    title = ""
+    url = ""
+    date = "None"
+    content_text = ""
+    
+    lines = content.split('\n')
+    for line in lines:
+        if line.startswith("Publication date:"):
+            date = line.replace("Publication date:", "").strip()
+        elif line.startswith("Title:"):
+            title = line.replace("Title:", "").strip()
+        elif line.startswith("Content:"):
+            content_text = line.replace("Content:", "").strip()
+        elif line.startswith("url:"):
+            url = line.replace("url:", "").strip()
+        elif line.strip() and not content_text:
+            content_text = line.strip()
+    
+    return {
+        'title': title,
+        'url': url,
+        'date': date,
+        'content': content_text
+    }
+
+def read_jsonl_file(file_path: str) -> List[Dict]:
+    """读取JSONL文件内容"""
+    if not os.path.exists(file_path):
+        return []
+    
+    data = []
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            try:
+                data.append(json.loads(line.strip()))
+            except json.JSONDecodeError:
+                continue
+    return data
+
+def find_matching_entry(data: List[Dict], claim: str):
+    """
+    查找匹配的claim条目并返回最大ID
     
     返回:
-    bool: 添加成功返回True，失败返回False
+        (匹配的条目, 最大ID)
     """
-    try:
-        # 确保新闻条目包含必要的键和内容
-        if "id" not in news_item:
-            raise ValueError("新闻条目必须包含'id'键")
-        if news is None:
-            raise ValueError("新闻内容不能为None")
-        
-        # 创建要添加的条目
-        entry = {
-            "id": news_item["id"],
-            "claim": news
-        }
-        
-        # 检查文件是否存在并获取已有ID
-        existing_ids = set()
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    try:
-                        existing_entry = json.loads(line)
-                        if "id" in existing_entry:  # 只处理包含id字段的条目
-                            existing_ids.add(existing_entry["id"])
-                    except json.JSONDecodeError:
-                        continue  # 跳过无效行
-            
-            # 检查新ID是否重复
-            if entry["id"] in existing_ids:
-                print(f"警告: ID {entry['id']} 已存在，跳过添加")
-                return False
-        
-        # 确保目录存在
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        
-        # 以追加模式写入新条目
-        with open(file_path, 'a', encoding='utf-8') as f:
-            f.write(json.dumps(entry, ensure_ascii=False) + '\n')
-        
-        print(f"成功添加ID为 {entry['id']} 的新闻条目")
-        return True
+    max_id = 0
+    for entry in data:
+        max_id = max(max_id, entry.get('id', 0))
+        if entry.get('claim') == claim:
+            return entry, max_id
+    return None, max_id
+
+def write_records_to_jsonl(all_records, news_id, output_path=".cache/brave/related_news.jsonl"):
+    """
+    将all_records写入JSONL文件，与指定的news_id关联
     
-    except Exception as e:
-        print(f"添加新闻条目时出错: {e}")
-        return False
+    参数:
+        all_records: 包含所有记录的列表
+        news_id: 要关联的新闻ID
+        output_path: JSONL文件输出路径
+    """
+    # 确保输出目录存在
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    # 读取现有JSONL文件（如果存在）
+    records = []
+    if os.path.exists(output_path):
+        with open(output_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                try:
+                    records.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    
+    # 查找是否存在对应news_id的记录
+    existing_record = None
+    for record in records:
+        if record.get("id") == news_id:
+            existing_record = record
+            break
+    
+    # 构建要写入的新记录（保留原有claim字段）
+    if existing_record:
+        # 存在旧记录，仅更新collection字段，保留其他字段（包括claim）
+        existing_record["collection"] = all_records
+        new_record = existing_record
+    else:
+        # 不存在旧记录，创建新记录
+        new_record = {
+            "id": news_id,
+            "collection": all_records
+        }
+    
+    # 更新或插入记录
+    updated = False
+    for i in range(len(records)):
+        if records[i].get("id") == news_id:
+            records[i] = new_record
+            updated = True
+            break
+    
+    if not updated:
+        records.append(new_record)
+    
+    # 重新写入JSONL文件
+    with open(output_path, 'w', encoding='utf-8') as f:
+        for record in records:
+            f.write(json.dumps(record, ensure_ascii=False) + '\n')

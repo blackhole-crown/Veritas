@@ -61,10 +61,30 @@ Each Analyst Report entry must follow this exact format:
   [DATE CHECK: date used = <explicitly state what date you are 
   referencing and where it comes from: news_text / context_data / 
   date unspecified>]
-  <report content>
 
-If the DATE CHECK shows a date not from news_text or context_data,
-rewrite the report with that date removed.
+
+**CONTEXT TRANSCRIPTION - MANDATORY FIRST STEP**:
+Before any analysis, copy the COMPLETE context_data text 
+provided below, word for word, into this block:
+
+===CONTEXT VERBATIM START===
+[copy every single character of context_data here, 
+ do not skip, summarize, or modify anything]
+===CONTEXT VERBATIM END===
+
+Then for each numerical claim in the news, search ONLY 
+within the ===CONTEXT VERBATIM=== block above.
+
+  [SOURCE CHECK:
+   Step A - News claims: <number from news>
+   Step B - Find in CONTEXT VERBATIM above: 
+     Search for "震源深度" inside ===CONTEXT VERBATIM===.
+     Copy the EXACT sentence containing it: "<sentence>"
+     If not found inside ===CONTEXT VERBATIM===, write: 
+     "NOT FOUND"
+   Step C - Context number: <read number from Step B only>
+   Step D - Compare: News=X vs Context=Y → MATCH/MISMATCH/NO DATA
+   Verdict: SUPPORTED/CONTRADICTED/NO EXTERNAL DATA]
 
 
 **EVIDENCE EVALUATION PRINCIPLES**:
@@ -83,11 +103,28 @@ rewrite the report with that date removed.
 - **HISTORICAL REFERENCES**: Verify basic temporal coherence but allow for reasonable variations
 
 **EVIDENCE VALIDATION GUIDELINES**:
-- Analyst Reports should be interpreted to support the news claim when reasonably possible
-- Reports with minor temporal misalignments should be discounted rather than used to invalidate the entire claim
-- Numerical indicators should be cross-verified, but minor discrepancies should not automatically invalidate the claim
-- When conflicting evidence exists, weigh the preponderance of evidence rather than requiring perfect consistency
-- **FALSE classification requires**: Direct contradiction from high-importance reports OR multiple independent sources showing the claim is impossible
+- **EXTERNAL KNOWLEDGE FIRST**: context_data is the PRIMARY and 
+  ONLY valid evidence source. Each claim must be explicitly compared 
+  against retrieved context_data before any conclusion is drawn.
+- **TRAINING KNOWLEDGE IS FORBIDDEN** as direct evidence. If used 
+  at all, it must be labeled [LLM: verify] and carries zero weight 
+  in the final judgment.
+- **NO DATA = NO FABRICATION**: If context_data contains no relevant 
+  information for a claim, that claim is marked "unverified" and 
+  defaults to TRUE per presumption of truthfulness. Do NOT invent 
+  analyst reports to fill the gap.
+- Analyst Reports should be interpreted to support the news claim 
+  when reasonably possible, provided they are grounded in context_data.
+- Reports with minor temporal misalignments should be discounted 
+  rather than used to invalidate the entire claim.
+- Numerical indicators should be cross-verified against context_data. 
+  Minor discrepancies do not automatically invalidate the claim.
+- When conflicting evidence exists, weigh the preponderance of 
+  context_data evidence rather than requiring perfect consistency.
+- **FALSE classification requires**: Direct contradiction from 
+  high-importance reports grounded in context_data [Data: Sources (id)].
+  Reports without Data citations cannot support FALSE classification.
+
 
 **ANALYSIS CONTENT REQUIREMENTS**:
 - For each Analyst Report, provide detailed evaluation of its evidentiary value and relevance
@@ -96,12 +133,21 @@ rewrite the report with that date removed.
 - Do not include 'Temporal Integrity Check' or similar sections in final output
 - Exclude 'Rationale for TRUE Classification' or similar concluding explanations
 - Ensure analytical depth by evaluating report credibility, data consistency, and contextual relevance
+- For each Analyst Report evaluation, explicitly state whether 
+  its content is grounded in context_data [Data: Sources (id)] 
+  or is unsupported training knowledge. Unsupported reports 
+  carry no evidentiary weight.
 
 **DECISION THRESHOLDS**:
-- **TRUE**: When majority of evidence supports the claim, OR when there is no direct contradictory evidence
-- **TRUE**: When evidence is mixed but more supports than contradicts the claim
-- **TRUE**: When only minor inconsistencies exist that don't fundamentally invalidate the claim
-- **FALSE**: Only when there is clear, direct, and substantial evidence contradicting the core claim
+- **TRUE**: Default classification. Apply when evidence supports the claim, is neutral, ambiguous, incomplete, or simply absent.
+- **TRUE**: When only minor inconsistencies exist.
+- **TRUE**: When the claim cannot be directly verified but also cannot be directly refuted.
+- **FALSE**: ONLY when at least 2 high-importance analyst reports (score ≥ 90) provide **explicit, direct, and unambiguous** contradiction of the core claim. Indirect evidence, missing data, or logical speculation are insufficient for FALSE.
+- **FALSE**: The burden of proof for FALSE is high. When in doubt, classify TRUE.
+
+**DEFAULT CLASSIFICATION RULE**:
+Unless there is explicit, direct, and high-confidence evidence proving the news is false, classify as TRUE. The absence of supporting evidence is NOT sufficient grounds for FALSE. Ambiguity defaults to TRUE.
+
 
 **FALSE Classification Standards**  
 *Note: The following standards and detailed reasons are only required if the news is classified as FALSE. Apply these criteria strictly and conservatively.*
