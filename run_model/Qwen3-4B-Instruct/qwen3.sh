@@ -15,5 +15,3 @@ swift deploy \
 --port 8006 \
 --vllm_max_num_seqs 4 \
 --max_model_len 32768
---enable_openai_api true \ 
---openai_api_key "sk-zhouzehui" 
