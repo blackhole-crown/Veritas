@@ -1,0 +1,1 @@
+因为docker没有gpu，所以addon_v1有些依赖gpu的包无法安装

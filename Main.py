@@ -58,7 +58,12 @@ def chat(message, result_id, history):
         
         GlobalVars.query_history = utils.update_query_history(                  #调用 utils.update_query_history 方法，更新查询历史记录（GlobalVars.query_history），传入相关参数包括新闻 ID、当前日期、证据链等
             news_id, query_date, res_coe, GlobalVars.K, update=update)
+        
+        utils.merge_to_result_jsonl(news_id, message)
+        
         print("Success!")
+        
+        
         
         if result_id != 0:
             sql.insert_result(result_id,message)
@@ -98,16 +103,16 @@ def chat_test(message, result_id, history):
     
     
     
-if __name__=='__main__':
+# if __name__=='__main__':
     
     
-    jsonl_file_path = '/home/zhouzehui/workspace/data/xxx.jsonl'  #todo学长给的
-    claims = read_claims_from_jsonl(jsonl_file_path)
+    # jsonl_file_path = '/home/zhouzehui/workspace/data/xxx.jsonl' 
+    # claims = read_claims_from_jsonl(jsonl_file_path)
     
     # for claim in claims:
     #     chat(claim,0,None)
     
     
 
-    chat("沃尔玛跻身万亿美元序列：传统零售大佬，悄悄变身科技卷王.",0,None)
+    # chat("测试标题.....",0,None)
     

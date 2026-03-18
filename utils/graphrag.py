@@ -7,7 +7,7 @@ import re
 import json
 from typing import List, Dict, Optional
 from . import utils
-import datatime
+import datetime
 
 dirs = [
     "swift2/my_inferencing/create_prompt_llm", 
@@ -190,8 +190,27 @@ def get_query_coe(news):
 # NEWS: **{news}**"
 
     current_time = datetime.datetime.now().strftime("%Y-%m-%d")
-    Q = f"Publication date:{current_time}.You are now required to classify the following NEWS. Please present a **chain of evidence** as outlined above, and provide a definitive judgment result (TRUE or FALSE, wrapped in **).\n\
-NEWS: **{news}**"
+    Q = (
+        f"Current query date: {current_time}.\n"
+        f"Publication date: {current_time}.\n\n"
+        f"You are now required to classify the following NEWS.\n\n"
+        f"CRITICAL INSTRUCTION - Read this before analysis:\n"
+        f"1. You MUST use the external knowledge provided in the "
+        f"context_data/Analyst Reports as your PRIMARY evidence source.\n"
+        f"2. For each claim in the news, explicitly compare it against "
+        f"the retrieved external knowledge.\n"
+        f"3. If the external knowledge contains data that matches or "
+        f"contradicts the news, cite it directly with [Data: Sources (id)].\n"
+        f"4. Your training knowledge is SECONDARY and must be labeled "
+        f"[LLM: verify] if used.\n"
+        f"5. If no relevant external knowledge is retrieved, state "
+        f"'No external data available for this claim' rather than "
+        f"using training knowledge as evidence.\n\n"
+        f"Please present a **chain of evidence** as outlined above, "
+        f"and provide a definitive judgment result "
+        f"(TRUE or FALSE, wrapped in **).\n"
+        f"NEWS: **{news}**"
+    )
     
     return Q
 
@@ -329,4 +348,4 @@ def write_records_to_jsonl(all_records, news_id, output_path=".cache/brave/relat
     with open(output_path, 'w', encoding='utf-8') as f:
         for record in records:
             f.write(json.dumps(record, ensure_ascii=False) + '\n')
-    
+

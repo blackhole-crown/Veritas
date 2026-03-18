@@ -15,13 +15,7 @@ split_contexts = True
 
 EMPTY_DF = pd.DataFrame([{"": ""}])
 
-# def dump_jsonl(data, file_dir):
-#     # 写入JSONL文件
-#     with open(file_dir, 'w', encoding='utf-8') as f:
-#         for item in data:
-#             # 将每个JSON对象写为一行
-#             json.dump(item, f, ensure_ascii=False)
-#             f.write('\n')
+
 
 import tempfile
 import shutil
@@ -64,29 +58,6 @@ def dump_jsonl(data, file_dir):
         print(f"Error writing to {file_dir}: {e}")
         raise
 
-# def load_jsonl(file_dir):
-#     data = []
-#     if not os.path.exists(file_dir):
-#         return data
-    
-#     try:
-#         with open(file_dir, 'r', encoding='utf-8') as file:
-#             for line in file:
-#                 line = line.strip()
-#                 if not line:
-#                     continue
-#                 try:
-#                     # 尝试解析JSON
-#                     item = json.loads(line)
-#                     data.append(item)
-#                 except json.JSONDecodeError:
-#                     # 静默跳过格式错误的行
-#                     continue
-#     except Exception:
-#         # 任何其他错误也静默处理
-#         pass
-    
-#     return data
 
 def load_jsonl(file_dir):
     data = []
@@ -313,23 +284,33 @@ def origin_judge(news, query_data, k):
     # 这里改成实际部署的模型和端口
     # 1. 调用模型API判断新闻真实性
     # 改了这里记得改settings.yaml
-    url = "http://127.0.0.1:8006/v1/chat/completions"   #  http://127.0.0.1:8005/v1/chat/completions   /    http://127.0.0.1:8006/v1/chat/completions
+    url = "http://127.0.0.1:8006/v1/chat/completions"
     headers = {"Content-Type": "application/json"}
     data = {
-        "model": "Qwen3-4B-Instruct-2507",         # Qwen2_5-7B-Instruct    /     Qwen3-4B-Instruct-2507
+        "model": "Qwen3-4B-Instruct-2507",
         "messages": [
-            {
-                "role": "system",  # 先用system角色设定规则
-                "content": "你是一个新闻真实性判断模型，必须严格只输出TRUE或FALSE，不要任何解释或额外文本。注意句子的转折，示例:事实是中国成立于1950年->FALSE；但中国成立于1950年是错误的->TRUE"
-            },
-            {
-                "role": "user",
-                "content": f"判断以下新闻是否真实(不确定就输出FALSE)：{news}"
-            }
-        ],
-        "max_tokens": 5,  # 限制输出长度，防止多余内容
-        "temperature": 0,  # 确保确定性输出
-    }
+           {
+               "role": "system",
+              "content": """你是一个新闻真实性判断专家，只能输出TRUE或FALSE。
+              判断原则：
+             1. 对于无法确认的新闻，一律输出FALSE
+             2. 重点关注逻辑矛盾和常识错误
+             3. 警惕转折句（如"但是"、"然而"）后的信息
+             4. 不依赖外部知识，仅基于新闻本身的内在逻辑
+
+             示例：
+             新闻："某国科学家发现永动机" -> FALSE (违反物理常识)
+             新闻："虽然有人说地球是平的，但科学研究证明地球是圆的" -> TRUE (转折后是正确信息)
+             新闻："某公司宣称开发出治疗所有癌症的药物" -> FALSE (过于绝对的宣称)"""
+           },
+         {
+            "role": "user",
+            "content": f"新闻内容：{news}\n\n请判断该新闻是否真实（无法确认请输出FALSE）："
+        }
+    ],
+    "max_tokens": 5,
+    "temperature": 0,
+}
     
     try:
         response = requests.post(url, headers=headers, json=data, timeout=30)
@@ -365,36 +346,6 @@ def origin_judge(news, query_data, k):
     # 使用统一的load_jsonl函数读取数据
     existing_data = load_jsonl(file_path)
 
-    # # 4. 查找或创建对应的id条目
-    # # 找到现有数据中的最大ID，如果列表为空则使用default=0
-    # max_id = max([item["id"] for item in existing_data], default=0)
-    # found = False
-    
-    # for item in existing_data:
-    #     if item["description"] == news:
-    #         found = True
-    #         # 更新现有条目
-    #         key = f"k={k}"
-    #         if key not in item["history"]:
-    #             item["history"][key] = []
-    #         item["history"][key].append(entry)
-    #         break
-    
-    # if not found:
-    #     # 创建新条目，使用最大ID+1作为新ID
-    #     new_entry = {
-    #         "id": max_id + 1,  # 这里改为 max_id + 1
-    #         "description": news,
-    #         "history": {
-    #             f"k={k}": [entry],
-    #             "k=10": [],
-    #             "k=15": [],
-    #             "k=20": []
-    #         }
-    #     }
-    #     existing_data.append(new_entry)
-    
-    # 4. 查找或创建对应的id条目
     max_id = 0
     found = False
     
@@ -451,3 +402,105 @@ def origin_judge(news, query_data, k):
         print(f"Failed to write data to file: {e}")
     
     return judgment
+
+
+def merge_to_result_jsonl(news_id, message):
+    """
+    将new.jsonl和related_news.jsonl中的数据合并到result.jsonl
+    
+    参数:
+        news_id: 新闻ID
+        message: 原始新闻内容（作为备用的description和claim）
+    
+    返回:
+        bool: 合并成功返回True，失败返回False
+    """
+    try:
+        # 1. 从 new.jsonl 读取完整的新闻数据（包括 history 和 last_output）
+        new_jsonl_path = ".cache/new.jsonl"
+        new_record_data = None
+        if os.path.exists(new_jsonl_path):
+            with open(new_jsonl_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    try:
+                        record = json.loads(line)
+                        if record.get("id") == news_id:
+                            new_record_data = record
+                            break
+                    except json.JSONDecodeError:
+                        continue
+        
+        if not new_record_data:
+            print(f"警告: 在new.jsonl中未找到ID为 {news_id} 的记录")
+            return False
+        
+        # 2. 从 related_news.jsonl 读取 collection 数据
+        related_news_path = ".cache/brave/related_news.jsonl"
+        related_record_data = None
+        if os.path.exists(related_news_path):
+            with open(related_news_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    try:
+                        record = json.loads(line)
+                        if record.get("id") == news_id:
+                            related_record_data = record
+                            break
+                    except json.JSONDecodeError:
+                        continue
+        
+        if not related_record_data:
+            print(f"警告: 在related_news.jsonl中未找到ID为 {news_id} 的记录")
+            return False
+        
+        # 3. 构建完整的 result.jsonl 条目
+        complete_result_entry = {
+            "id": news_id,
+            "description": new_record_data.get("description", message),
+            "history": new_record_data.get("history", {
+                "k=5": [], "k=10": [], "k=15": [], "k=20": []
+            }),
+            "last_output": new_record_data.get("last_output", {
+                "k=5": "", "k=10": "", "k=15": "", "k=20": ""
+            }),
+            "revelent_news": {
+                "id": news_id,
+                "claim": related_record_data.get("claim", message),
+                "collection": related_record_data.get("collection", [])
+            }
+        }
+        
+        # 4. 读取现有的 result.jsonl
+        result_path = ".cache/result.jsonl"
+        result_records = []
+        if os.path.exists(result_path):
+            with open(result_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    try:
+                        result_records.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
+        
+        # 5. 更新或添加记录
+        result_updated = False
+        for i, record in enumerate(result_records):
+            if record.get("id") == news_id:
+                result_records[i] = complete_result_entry
+                result_updated = True
+                break
+        
+        if not result_updated:
+            result_records.append(complete_result_entry)
+        
+        # 6. 写入 result.jsonl
+        os.makedirs(os.path.dirname(result_path), exist_ok=True)
+        with open(result_path, 'w', encoding='utf-8') as f:
+            for record in result_records:
+                f.write(json.dumps(record, ensure_ascii=False) + '\n')
+
+        return True
+        
+    except Exception as e:
+        print(f"合并数据到result.jsonl时出错: {e}")
+        import traceback
+        traceback.print_exc()
+        return False

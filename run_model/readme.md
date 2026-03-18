@@ -1,30 +1,3 @@
-# 进入项目目录
-cd /home/zhouzehui/workspace/workspace/addon_v1_qwen3_api       <!-- 必要的 -->
-
-
-# 部署生成式模型（以qwen为例） - Qwen3-4B-Instruct-2507
-conda activate swift3
-bash run_model/qwen3.sh
-
-- 挂载后台运行
-nohup bash run_model/Qwen3-4B-Instruct/qwen3.sh > run_model/nohup/Qwen3_4B-Instruct/1125/nohup.txt 2> run_model/nohup/Qwen3_4B-Instruct/1125/error.txt &
-
-- 启动脚本
-bash run_model/Qwen3-4B-Instruct/nohup_qwen3.bash
-bash run_model/Qwen3-4B-Instruct/stop.bash
-
-# 挂载部署模型（以gte-qwen2_1.5b为例）
-conda activate xinference
-xinference-local --host 0.0.0.0 --port 9997
-bash run_model/xinference.sh
-
-- 挂载后台
-nohup xinference-local --host 0.0.0.0 --port 9997 > run_model/nohup/Xinference/1013/nohup.txt 2> run_model/nohup/Xinference/1013/error.txt &
-
-- 启动脚本
-bash run_model/Gte-Qwen-2B/nohup_xinference.bash
-bash run_model/Gte-Qwen-2B/stop.bash
-
 # 代理
 source /etc/profile.d/clash.sh
 
@@ -37,27 +10,6 @@ curl -I https://www.google.com
 - 关闭代理
 proxy_off
 
-
-# 后端运行
-conda activate graph
-python Main.py
-
-conda activate addon_v1
-
-# 启动 Celery Worker
-celery -A celery_app worker --loglevel=info --concurrency=1
-- 挂载后台
-nohup celery -A celery_app worker --loglevel=info --concurrency=1 > logs/celery/1027/celery.log 2>&1 &
-
-# 启动 Flask 应用 
-python app.py
-- 挂载后台 
-nohup python app.py > logs/app/1027/flask.log 2>&1 &
-
-# 启动 Flower 监控
-celery -A celery_app flower --port=5556
-- 挂载后台
-nohup celery -A celery_app flower --port=5556 > logs/app/1027/flower.log 2>&1 &
 
 
 # 数据库操作

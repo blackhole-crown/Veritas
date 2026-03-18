@@ -1,16 +1,17 @@
-# Dockerfile.xinference
+# Dockerfile.addon
 FROM nvidia/cuda:12.8.0-runtime-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 安装基础工具
+# 安装基础工具（包括 redis 客户端）
 RUN apt-get update && apt-get install -y \
     wget git build-essential curl vim tzdata \
+    redis-tools \
     && ln -fs /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && dpkg-reconfigure --frontend noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-# 先安装Miniconda
+# **先安装 Miniconda**
 RUN mkdir -p ~/miniconda3 && \
     wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh && \
     bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3 && \
@@ -24,32 +25,45 @@ RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkg
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/msys2
 
-# **现在pip已经可用，再进行pip换源**
+# **现在 pip 已存在，再进行 pip 换源**
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && \
     pip config set global.trusted-host mirrors.tuna.tsinghua.edu.cn
 
 WORKDIR /app
 
-# 创建 xinference 环境并安装指定版本的包
-RUN conda create -n xinference python=3.10.9 -y && \
-    /bin/bash -c "source /root/miniconda3/etc/profile.d/conda.sh && \
-    conda activate xinference && \
-    pip install xinference[transformers]==1.10.0 && \
-    pip install sentence-transformers==5.1.1 && \
-    pip install torch==2.8.0 torchvision==0.23.0 && \
-    pip install transformers==4.56.2 && \
-    pip install accelerate==1.10.1 && \
-    pip install modelscope==1.30.0 && \
-    pip install numpy==2.2.6 && \
-    pip install pandas==2.3.2 && \
-    pip install scikit-learn==1.7.2"
+# 1. 创建 addon_v1 环境（根据你的 environment_addon_v1.yml）
+COPY env/addon_v1/environment_addon_v1.yml /app/env/addon_v1.yml
+RUN conda env create -f /app/env/addon_v1.yml
 
-# 复制 xinference 相关脚本
-COPY run_model/Gte-Qwen-2B/ /app/run_model/Gte-Qwen-2B/
-COPY run_model/nohup/Xinference/ /app/run_model/nohup/Xinference/
+# 2. 创建 graph 环境（Python 3.11）并安装 graphrag
+COPY graphrag/ /app/graphrag/
+COPY env/environment_graph.yaml /app/env/graph.yaml
+
+RUN /bin/bash -c "source /root/miniconda3/etc/profile.d/conda.sh && \
+    conda create -n graph python=3.11 -y && \
+    conda activate graph && \
+    cd /app/graphrag && \
+    pip install -e . && \
+    pip install jsonlines"
+
+# 3. 复制项目核心代码
+COPY api/ /app/api/
+COPY utils/ /app/utils/
+COPY sql/ /app/sql/
+COPY scripts/ /app/scripts/
+
+# 复制根目录的 Python 文件
+COPY *.py /app/
+COPY celery_results /app/celery_results
+
+# 4. 复制运行脚本和日志目录
+COPY run_model/nohup/api/ /app/run_model/nohup/api/
+
+# 5. 创建必要的目录
+RUN mkdir -p /app/logs/callbacks /app/result /app/celery_results
 
 # 设置工作目录
-WORKDIR /app/run_model/Gte-Qwen-2B
+WORKDIR /app
 
 # 默认命令
 CMD ["/bin/bash"]

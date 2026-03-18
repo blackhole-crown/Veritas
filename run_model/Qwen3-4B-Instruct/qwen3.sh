@@ -1,7 +1,7 @@
 
 # 激活 conda 环境
 source ~/miniconda3/etc/profile.d/conda.sh
-conda activate swift3
+conda activate swift
 
 CUDA_VISIBLE_DEVICES=0 \
 swift deploy \
