@@ -25,10 +25,10 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 DB_CONFIG = {
     'dbname': 'veritas_news',
-    'user': 'zhouzehui', 
+    'user': 'Veritas', 
     'host': '139.224.18.139',
     'port': '5433',
-    'password': 'zzh050119.'
+    'password': 'Veritas.'
 }
 
 CACHE_PATH = "../.cache/origin_judge.jsonl"

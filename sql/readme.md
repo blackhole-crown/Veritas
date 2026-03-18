@@ -3,14 +3,36 @@ sudo systemctl status postgresql
 
 # Postgresql数据库
 
-ip:139.224.18.139:5433，
-用户 zhouzehui
-密码 zzh050119.
+ip:139.224.18.139:5433，(修改为本机ip地址和端口)
+用户 Veritas
+密码 Veritas
 数据库 veritas_news
 schema 是默认的 public
 
-psql -h 139.224.18.139 -p 5433 -U zhouzehui -d veritas_news
-密码： zzh050119.
+psql -h 139.224.18.139 -p 5433 -U Veritas -d veritas_news
+密码： Veritas
+
+
+
+# 创建表
+# 进入目录
+cd sql
+# 1. 在新服务器上创建数据库和用户
+sudo -u postgres psql << 'EOF'
+CREATE USER Veritas WITH PASSWORD 'Veritas';
+CREATE DATABASE veritas_news OWNER Veritas;
+GRANT ALL PRIVILEGES ON DATABASE veritas_news TO Veritas;
+EOF
+
+# 2. 执行建表语句
+psql -h localhost -p 5433 -U Veritas -d veritas_news -f create_table.sql
+
+# 3. 验证表结构
+psql -h localhost -p 5433 -U Veritas -d veritas_news -c "\d Query"
+psql -h localhost -p 5433 -U Veritas -d veritas_news -c "\d Result"
+psql -h localhost -p 5433 -U Veritas -d veritas_news -c "\d Cite"
+
+配置好后，记得同步修改utils/sql.py的连接池
 
 _______________________________
 - 查看所有表
@@ -22,11 +44,6 @@ _______________________________
 - 查看触发器
 \dy
 _______________________________
-
-测试接口的curl命令
-curl -X POST http://localhost:5000/doVeritas \
--H "Content-Type: application/json" \
--d '{"title": "测试标题", "url": "http://example.com"}'
 
 
 # 查询
