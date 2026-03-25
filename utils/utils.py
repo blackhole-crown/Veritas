@@ -289,28 +289,29 @@ def origin_judge(news, query_data, k):
     data = {
         "model": "Qwen3-4B-Instruct-2507",
         "messages": [
-           {
-               "role": "system",
-              "content": """你是一个新闻真实性判断专家，只能输出TRUE或FALSE。
-              判断原则：
-             1. 对于无法确认的新闻，一律输出FALSE
-             2. 重点关注逻辑矛盾和常识错误
-             3. 警惕转折句（如"但是"、"然而"）后的信息
-             4. 不依赖外部知识，仅基于新闻本身的内在逻辑
+            {
+                "role": "system",
+                "content": """你是一个新闻真实性判断专家，只能输出TRUE或FALSE。
+                判断原则：
+                1. 默认倾向为TRUE，除非新闻中存在明确的逻辑矛盾、事实错误或违背基本常识
+                2. 只有遇到无法辩驳的错误时才输出FALSE
+                3. 对于不确定或有争议的内容，优先输出TRUE
+                4. 基于新闻本身的内在逻辑，不过度质疑
 
-             示例：
-             新闻："某国科学家发现永动机" -> FALSE (违反物理常识)
-             新闻："虽然有人说地球是平的，但科学研究证明地球是圆的" -> TRUE (转折后是正确信息)
-             新闻："某公司宣称开发出治疗所有癌症的药物" -> FALSE (过于绝对的宣称)"""
-           },
-         {
-            "role": "user",
-            "content": f"新闻内容：{news}\n\n请判断该新闻是否真实（无法确认请输出FALSE）："
-        }
-    ],
-    "max_tokens": 5,
-    "temperature": 0,
-}
+                示例：
+                新闻："某公司宣称开发出治疗所有癌症的药物" -> TRUE (商业宣称，非明显错误)
+                新闻："地球是平的" -> FALSE (明确违反基本常识)
+                新闻："虽然有人说地球是平的，但科学研究证明地球是圆的" -> TRUE (转折后是正确信息)
+                新闻："永动机已经成功研发" -> FALSE (明确违反物理定律)"""
+            },
+            {
+                "role": "user",
+                "content": f"新闻内容：{news}\n\n请判断该新闻是否真实（优先输出TRUE，除非明确错误）："
+            }
+        ],
+        "max_tokens": 5,
+        "temperature": 0,
+    }
     
     try:
         response = requests.post(url, headers=headers, json=data, timeout=30)
