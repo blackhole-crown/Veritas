@@ -10,6 +10,12 @@ from uuid import UUID
 import json
 # 在现有导入后面添加
 from callback_manager import callback_manager
+
+from dotenv import load_dotenv
+
+# 加载 api 目录下的 .env 文件
+load_dotenv()
+
 # 动态添加项目根目录到 Python 路径
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if project_root not in sys.path:
@@ -27,24 +33,62 @@ K = 5
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False
 
+# DB_CONFIG = {
+#     'dbname': 'veritas_news',
+#     'user': 'zhouzehui', 
+#     'host': '139.224.18.139',
+#     'port': '5433',
+#     'password': 'zzh050119.'
+# }
+
+# 从环境变量读取数据库配置
+# def get_db_connection():
+#     """获取数据库连接"""
+#     try:
+#         return psycopg2.connect(**DB_CONFIG)
+#     except psycopg2.Error as e:
+#         logger.error(f"Database connection failed: {e}")
+#         raise
+
 DB_CONFIG = {
-    'dbname': 'veritas_news',
-    'user': 'zhouzehui', 
-    'host': '139.224.18.139',
-    'port': '5433',
-    'password': 'zzh050119.'
+    'dbname': os.environ.get('DB_NAME', 'veritas_news'),
+    'user': os.environ.get('DB_USER', 'zhouzehui'),
+    'host': os.environ.get('DB_HOST', '139.224.18.139'),
+    'port': os.environ.get('DB_PORT', '5433'),
+    'password': os.environ.get('DB_PASSWORD', 'zzh050119.')
 }
 
+db_pool = None
+
+
+def init_db_pool():
+    """初始化数据库连接池"""
+    global db_pool
+    if db_pool is None:
+        try:
+            db_pool = SimpleConnectionPool(1, 10, **DB_CONFIG)
+            logger.info("Database connection pool initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize database pool: {e}")
+            raise
+
 def get_db_connection():
-    """获取数据库连接"""
-    try:
-        return psycopg2.connect(**DB_CONFIG)
-    except psycopg2.Error as e:
-        logger.error(f"Database connection failed: {e}")
-        raise
+    """从连接池获取连接"""
+    if db_pool is None:
+        init_db_pool()
+    return db_pool.getconn()
+
+def return_db_connection(conn):
+    """归还连接到连接池"""
+    if db_pool and conn:
+        db_pool.putconn(conn)
 
 @app.route('/doVeritas', methods=['POST'])
 def do_veritas():
+    # 延迟导入，避免循环依赖
+    from callback_manager import callback_manager
+    
+    conn = None
     try:
         # 1. 验证输入
         data = request.get_json()
@@ -52,15 +96,15 @@ def do_veritas():
             return jsonify({"status": 400, "message": "Empty request body"}), 400
 
         title = data.get('title')
-        source = data.get('source', '')  # 使用默认值简化
+        source = data.get('source', '')
         url = data.get('url', '')
         
-        if not title:  # 修正错误信息
+        if not title:
             return jsonify({"status": 400, "message": "Title is required"}), 400
 
         # 2. 插入数据库
         try:
-            query_data = sql.insert_query(title, url, source)
+            query_data = sql_utils.insert_query(title, url, source)
             uuid = query_data['uuid']
             query_id = query_data['id']
         except Exception as e:
@@ -69,6 +113,7 @@ def do_veritas():
 
         # 3. 获取验证结果（同步执行）
         max_retries = 3
+        veritas = "ERROR"
         for attempt in range(max_retries):
             try:
                 veritas = utils.origin_judge(title, query_data, K)
@@ -76,13 +121,11 @@ def do_veritas():
             except Exception as e:
                 if attempt == max_retries - 1:
                     logger.error(f"Failed after {max_retries} attempts: {e}")
-                    veritas = "ERROR"
                 else:
                     logger.warning(f"Attempt {attempt + 1} failed, retrying: {e}")
                     time.sleep(0.5)
         
         # 4. 创建Result记录
-        conn = None
         try:
             conn = get_db_connection()
             with conn.cursor() as cursor:
@@ -104,7 +147,7 @@ def do_veritas():
             return jsonify({"status": 500, "message": f"Database error: {str(e)}"}), 500
         finally:
             if conn:
-                conn.close()
+                return_db_connection(conn)
 
         # 5. 启动 Celery 后台任务
         task = run_chat_task.apply_async(args=[title, result_id])
@@ -115,7 +158,6 @@ def do_veritas():
         callback_registered = False
         
         if callback_url:
-            # 验证回调URL格式
             if not callback_url.startswith(('http://', 'https://')):
                 return jsonify({"status": 400, "message": "Invalid callback URL format"}), 400
             
@@ -148,7 +190,6 @@ def do_veritas():
     except Exception as e:
         logger.exception("Unexpected error in doVeritas")
         return jsonify({"status": 500, "message": f"Internal server error: {str(e)}"}), 500
-
 
 # 添加任务状态查询接口
 @app.route('/taskStatus/<task_id>', methods=['GET'])

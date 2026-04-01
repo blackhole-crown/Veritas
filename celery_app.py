@@ -2,42 +2,46 @@ import os
 import sys
 from celery import Celery
 import logging
+from dotenv import load_dotenv
 
-# 添加当前目录到 Python 路径
+# 加载 api 目录下的 .env 文件
+api_dir = os.path.dirname(os.path.abspath(__file__))
+env_file = os.path.join(api_dir, '.env')
+if os.path.exists(env_file):
+    load_dotenv(env_file)
+
 sys.path.insert(0, os.path.dirname(__file__))
 
-# 设置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 创建 Celery 实例
 celery_app = Celery('veritas')
 
-# 确保结果目录存在 - 放在项目目录下，方便管理
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 RESULT_DIR = os.path.join(PROJECT_ROOT, 'celery_results')
 os.makedirs(RESULT_DIR, exist_ok=True)
 
 logger.info(f"Celery results directory: {RESULT_DIR}")
 
-# 配置 Celery - 使用文件系统作为结果后端
+# 从环境变量读取 Redis 配置
+REDIS_HOST = os.environ.get('REDIS_HOST', 'localhost')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_DB = os.environ.get('REDIS_DB', '0')
+
 celery_app.conf.update(
-    broker_url='redis://localhost:6379/0',
-    result_backend='file://' + RESULT_DIR,  # 使用文件系统作为结果后端
+    broker_url=f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}',
+    result_backend='file://' + RESULT_DIR,
     
-    # 任务相关配置
     task_serializer='json',
     accept_content=['json'],
     result_serializer='json',
     timezone='Asia/Shanghai',
     enable_utc=True,
     
-    # 工作进程配置
     task_acks_late=True,
     worker_prefetch_multiplier=1,
     task_reject_on_worker_lost=True,
     
-    # 任务重试策略
     task_track_started=True,
     task_annotations={
         '*': {
@@ -48,20 +52,17 @@ celery_app.conf.update(
         }
     },
     
-    # 结果过期时间（秒）
-    result_expires=86400,  # 24小时
+    result_expires=86400,
     
-    # 文件系统后端特定配置
     result_backend_transport_options={
         'data_folder': RESULT_DIR,
         'taskmeta_filename': 'taskmeta.json'
     },
     
-    # 添加这一行，明确指定任务模块
     imports=['tasks']
 )
 
-# 可选：添加全局错误处理
+
 @celery_app.task(bind=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')

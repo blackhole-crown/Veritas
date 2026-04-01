@@ -1,161 +1,121 @@
-# 部署
-查看run_model/readme.md
+# Veritas
 
-# 部署模型
-bash run_model/Qwen3-4B-Instruct/nohup_qwen3.bash
-bash run_model/Gte-Qwen-2B/nohup_xinference.bash
+> 新闻事实核查系统 - 基于 RAG 和知识图谱的智能真伪验证平台
 
+[![Python Version](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Code Style](https://img.shields.io/badge/code%20style-PEP8-brightgreen.svg)](https://www.python.org/dev/peps/pep-0008/)
 
+## 📖 简介
 
+Veritas 是一个基于 RAG（检索增强生成）和知识图谱的新闻事实核查系统。它能够接收新闻标题或 URL，通过搜索引擎获取相关证据，利用知识图谱整合信息，最终由大语言模型生成包含完整证据链和真伪判断的报告。
 
+### 核心特性
 
-# 测试接口
+- 🔍 **智能检索** - 集成 Brave Search / 同花顺新闻，自动获取相关证据
+- 🧠 **知识图谱** - 基于 GraphRAG 构建实体关系网络，深入理解新闻上下文
+- 📊 **证据链生成** - LLM 生成结构化的推理过程和真伪判断
+- ⏱️ **异步处理** - 基于 Celery 的异步任务队列，确保 API 快速响应
+- 🔔 **回调机制** - 支持任务完成后主动推送结果到指定 URL
+- 📦 **批量验证** - 支持批量重新验证已有的 claims
+- 📈 **任务追踪** - 提供任务状态查询接口，实时获取处理进度
 
-- doVeritas
+## 🚀 快速开始
 
+### 环境要求
+
+- Python 3.11+
+- PostgreSQL 12+
+- Redis 6+
+- CUDA 11.8+ (GPU 加速，推荐 8GB+ 显存)
+
+### 安装
+
+```bash
+# 克隆项目
+git clone https://github.com/yourname/veritas.git
+cd veritas
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+详细部署指南请参考：
+- [模型部署指南](run_model/README.md)
+- [API 服务部署](api/README.md)
+- [数据库配置](sql/README.md)
+
+### 启动服务
+
+```bash
+# 1. 启动模型服务
+cd run_model
+# 详见 run_model/README.md
+
+# 2. 启动 API 服务
+cd api
+bash start.bash
+```
+
+### 验证服务
+
+```bash
 curl -X POST http://localhost:5000/doVeritas \
   -H "Content-Type: application/json" \
-  -d '{
-    "title": "美国与伊朗开战le",
-    "url":"",
-    "source": "Router"
-  }'
+  -d '{"title": "测试新闻标题"}'
+```
 
+## 📚 API 文档
 
-- queryVeritas
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/doVeritas` | 提交新闻验证 |
+| GET | `/queryVeritas` | 查询验证结果 |
+| GET | `/taskStatus/<task_id>` | 查询任务状态 |
+| POST | `/redoVeritas` | 重新验证 |
+| POST | `/batchRedoVeritas` | 批量重新验证 |
 
-curl -X GET "http://localhost:5000/queryVeritas?claim=9200a331-9e03-55a6-a46b-5c0b7b2a030e"
+详细 API 文档见 [api/Document_api.md](api/Document_api.md)
 
-claude --plugin-dir ./connect-apps-plugin
+## 📁 项目结构
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# 服务器
-1. clash安装目录
-/root/clash-for-linux
-
-2. 普通用户设置代理
-Clash Dashboard 访问地址: http://<ip>:9090/ui
-Secret: 907b33965502fe434180cf1e42a1f1ef9f52bf349276d923efa448a760252353
-请执行以下命令加载环境变量: source /etc/profile.d/clash.sh
-请执行以下命令开启系统代理: proxy_on
-若要临时关闭系统代理，请执行: proxy_off
-查看代理环境变量: env | grep -E 'http_proxy|https_proxy'
-测试Google: curl -I https://www.google.com
-
-3. 数据（模型）存储路径，公有数据建议存储到/data/zycj，下载模型尽量使用modelscope,使用阿里内部网络，速度很快，现有模型如下：
-/data/zycj
-└── models
-    ├── Helsinki-NLP
-    └── Qwen
-        ├── Qwen2.5-32B-Instruct-AWQ
-        ├── Qwen2.5-VL-3B-Instruct
-        └── Qwen2.5-VL-7B-Instruct
-
-
-# 目录结构
-addon/
-├── app.py                 # 原来的主应用文件
+```
+veritas/
+├── README.md              # 项目主文档（本文件）
+├── LICENSE                # MIT 许可证
+├── requirements.txt       # Python 依赖
+├── Main.py                # 核心验证逻辑
+├── app.py                 # Flask 主应用
 ├── celery_app.py          # Celery 配置
 ├── tasks.py               # Celery 任务定义
-├── Main.py
-├── utils/
-│   ├── __init__.py
-│   ├── sql.py
-│   └── utils.py
-└── requirements.txt
+├── callback_manager.py    # 回调管理器
+│
+├── api/                   # API 服务
+│   ├── README.md          # API 部署文档
+│   ├── start.bash         # 启动脚本
+│   ├── stop.bash          # 停止脚本
+│   └── Document_api.md    # API 接口文档
+│
+├── run_model/             # 模型服务
+│   ├── README.md          # 模型部署文档
+│   ├── Qwen3-4B-Instruct/ # Qwen3 模型配置
+│   └── Gte-Qwen-2B/       # GTE Embedding 配置
+│
+├── utils/                 # 工具模块
+├── graphrag/              # GraphRAG 配置
+├── sql/                   # 数据库脚本
+└── env/                   # Conda 环境配置
+```
 
+## 🤝 贡献
 
+欢迎提交 Issue 和 Pull Request！
 
+## 📄 许可证
 
+MIT License - 详见 [LICENSE](LICENSE)
 
+---
 
-## 表示一个进度
-仅对于“浪浪山小妖怪的新闻”解决了进制转换和时间错位的问题，不过仍然存在名称翻译的问题，提示词ai生成好了还未修改
-现在正想要扩展新闻，试试看之前的提示词修改后是否对别的错误判断的新闻适用，还需要解决的问题是输出规范问题，输出格式已经变了，好在备份了之前的，前面200条都是按照老的提示词泡出来的结果
-是用新的提示词后最好全部重新跑，在管数据库和别的问题，还有一个遗留的就是local和global的问题，之前没改提示词试了使用global，效果是一样的，仍然是使用模型自己训练的数据集作为背景
-
-- 1010
-接口测试成功，问题在于跑出的结果未能成功插入数据库√
-
-- 1011
-有个想法就是，不在Main里面方origin_judge,而是只在接口里使用√
-
-insert_result成功
-
-- 1013
-插入数据库之前，把claim清洗一下
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+**让 AI 帮你验证新闻真相！** 🚀
 

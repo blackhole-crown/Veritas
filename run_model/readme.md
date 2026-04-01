@@ -1,170 +1,206 @@
-# 代理
-source /etc/profile.d/clash.sh
+# 模型部署指南
 
-- 开启代理
-proxy_on
+本目录包含 Veritas 系统所需模型的部署脚本和配置。
 
-- 测试代理
-curl -I https://www.google.com
+## 📋 模型列表
 
-- 关闭代理
-proxy_off
+| 模型 | 用途 | 端口 | 环境 |
+|------|------|------|------|
+| Qwen3-4B-Instruct-2507 | 大语言模型（LLM） | 8006 | swift |
+| gte-Qwen2-1.5B-instruct | 文本嵌入模型（Embedding） | 9997 | xinference |
 
+## 🚀 快速部署
 
+### 1. Qwen3-4B-Instruct-2507
 
-# 数据库操作
-- 连接
-psql -h 139.224.18.139 -p 5433 -U zhouzehui -d veritas_news
+#### 创建虚拟环境
 
-- 查询
-\dt 查看表结构
+```bash
+conda create -n swift python=3.11
+conda activate swift
+pip install modelscope accelerate
+```
 
-SELECT * FROM Query;
-<!-- SELECT * FROM Result; -->
-SELECT id,title,truth,knowledge,query_id FROM Result;
-SELECT * FROM cite;
+#### 下载模型
 
-SELECT content FROM Result where query_id = 21;
+```bash
+python -c "
+from modelscope import snapshot_download
+snapshot_download('Qwen/Qwen3-4B-Instruct-2507', 
+                  cache_dir='/path/to/models', 
+                  revision='master')
+"
+```
 
-# 测试模型部署
+#### 安装 Swift
 
-- Qwen2_5-7B-Instruct
-curl -X POST http://127.0.0.1:8005/v1/chat/completions \
--H "Content-Type: application/json" \
--d '{
-  "model": "Qwen2_5-7B-Instruct",
-  "messages": [
-    {
-      "role": "user",
-      "content": "判断以下新闻的真实性，仅输出TRUE或FALSE：中华人民共和国成立于1948年"
-    }
-  ],
-  "max_tokens": 1024,
-  "temperature": 0
-}'
+```bash
+cd resource/ms-swift
+pip install -e .[llm]
+pip install "vllm>=0.6.1"
+```
 
-- gte-Qwen2
+#### 启动服务
+
+```bash
+conda activate swift
+cd Qwen3-4B-Instruct
+
+# 方式一：直接启动
+CUDA_VISIBLE_DEVICES=0 \
+swift deploy \
+  --model_type qwen2_5 \
+  --model /path/to/models/Qwen/Qwen3-4B-Instruct-2507 \
+  --infer_backend vllm \
+  --gpu_memory_utilization 0.91 \
+  --temperature 0 \
+  --tensor_parallel_size 1 \
+  --host 127.0.0.1 \
+  --port 8006 \
+  --max_num_seqs 4 \
+  --max_model_len 9216
+
+# 方式二：后台运行
+bash nohup_qwen3.bash
+
+# 停止服务
+bash stop.bash
+```
+
+### 2. GTE-Qwen2 Embedding 模型
+
+#### 创建虚拟环境
+
+```bash
+conda create --name xinference python=3.10.9
+conda activate xinference
+pip install "xinference[transformers]" sentence-transformers
+```
+
+#### 下载模型
+
+```bash
+python -c "
+from modelscope import snapshot_download
+snapshot_download('iic/gte_Qwen2-1.5B-instruct', 
+                  cache_dir='/path/to/models', 
+                  revision='master')
+"
+```
+
+#### 启动服务
+
+```bash
+conda activate xinference
+cd Gte-Qwen-2B
+
+# 方式一：直接启动（需两个终端）
+# 终端1：启动 Xinference 服务
+xinference-local --host 0.0.0.0 --port 9997
+
+# 终端2：部署模型
+xinference launch \
+  --model-name gte-Qwen2 \
+  --model-type embedding \
+  --replica 1 \
+  --n-gpu auto \
+  --gpu-idx 0 \
+  --model-path /path/to/models/gte_Qwen2-1_5B-instruct
+
+# 方式二：后台运行
+bash nohup_xinference.bash
+
+# 停止服务
+bash stop.bash
+```
+
+## 🧪 测试模型
+
+### 测试 Qwen3
+
+```bash
+curl -X POST http://127.0.0.1:8006/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen3-4B-Instruct-2507",
+    "messages": [{"role": "user", "content": "你好"}],
+    "max_tokens": 100,
+    "temperature": 0
+  }'
+```
+
+### 测试 Embedding
+
+```bash
 curl -X POST http://0.0.0.0:9997/v1/embeddings \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gte-Qwen2",
-    "input": "/home/zhouzehui/workspace/workspace/addon_v1_qwen3_api/run_model/Gte-Qwen-2B/nohup_xinference.bash"
-}'
-
-- Qwen3-4B-Instruct-2507
-curl -X POST http://127.0.0.1:8006/v1/chat/completions \
--H "Content-Type: application/json" \
--d '{
-  "model": "Qwen3-4B-Instruct-2507",
-  "messages": [
-    {
-      "role": "user",
-      "content": "告诉我2025年12月21日的天气"
-    }
-  ],
-  "max_tokens": 1024,
-  "temperature": 0
-}'
-
-
-curl -X POST http://127.0.0.1:8006/v1/chat/completions \
--H "Content-Type: application/json" \
--d '{
-  "model": "Qwen3-4B-Instruct-2507",
-  "messages": [
-    {
-      "role": "user",
-      "content": "判断下面这个claim是否属于新闻，仅输出TRUE或FALSE\n\"claim\"：CPO概念股多股跳水，新易盛、中际旭创跌超5%"
-    }
-  ],
-  "max_tokens": 1024,
-  "temperature": 0
-}'
-
-
-curl -X POST http://127.0.0.1:8006/v1/chat/completions \
--H "Content-Type: application/json" \
--d '{
-  "model": "Qwen3-4B-Instruct-2507",
-  "messages": [
-    {
-      "role": "user",
-      "content": "判断下面这个claim是否属于新闻，并给出理由\n\"claim\"：CPO概念股多股跳水，新易盛、中际旭创跌超5%"
-    }
-  ],
-  "max_tokens": 1024,
-  "temperature": 50
-}'
-
-
-curl -X POST http://127.0.0.1:8888/api/news \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": 9999,
-    "description": "测试新闻标题：Gemini准确率从21%飙到97%",
-    "history": {
-      "k=5": [
-        {
-          "Date": "2026-03-05",
-          "Result": "FALSE"
-        }
-      ],
-      "k=10": [],
-      "k=15": [],
-      "k=20": []
-    },
-    "last_output": {
-      "k=5": "#### **1. COLLECTION**\n**Record ALL Analyst Reports one by one:**\n- **Analyst Report 1 (Importance Score: 100)**: Test report content\n\n**+more**\n\n---\n\n#### **2. ANALYSIS**\n**Evaluation of ALL recorded Analyst Reports one by one:**\n- **Analyst Report 1 (Importance Score: 100)**: Test analysis\n\n**Evidence Synthesis and Corroboration:**\n- Evidence 1\n\n---\n\n#### **3. CONCLUSION**\n### **Final Judgment**\n**FALSE**\n\n**Detailed Reasons for False Classification:**\nⅠ. **Test Reason**\nTest content\n\n**NEWS TYPE**\n[Test]",
-      "k=10": "",
-      "k=15": "",
-      "k=20": ""
-    },
-    "revelent_news": {
-      "id": 9999,
-      "claim": "测试新闻标题",
-      "collection": [
-        {
-          "id": 1,
-          "title": "相关新闻1",
-          "url": "url:https://example.com/news1"
-        }
-      ]
-    }
+    "input": "测试文本"
   }'
+```
 
+## 📁 目录结构
 
+```
+run_model/
+├── README.md                 # 本文件
+├── Qwen3-4B-Instruct/        # Qwen3 模型
+│   ├── nohup_qwen3.bash      # 后台启动脚本
+│   ├── stop.bash             # 停止脚本
+│   ├── qwen3.sh              # 模型启动配置
+│   └── environment_swift.yaml
+└── Gte-Qwen-2B/              # GTE Embedding 模型
+    ├── nohup_xinference.bash # 后台启动脚本
+    ├── stop.bash             # 停止脚本
+    ├── xinference.sh         # 模型启动配置
+    └── environment_xinference.yaml
+```
 
+## 🔧 配置说明
 
-* 若有端口冲突请修改，并修改graphrag/sample/settings.yaml的端口
-* 若要更换模型，请重新配置bash文件
+### 修改模型路径
 
+编辑 `Qwen3-4B-Instruct/qwen3.sh`：
 
+```bash
+--model /your/actual/model/path/Qwen/Qwen3-4B-Instruct-2507
+```
 
-# 解决僵尸进程
-ps -o pid,ppid -p ppid
-kill -9 ppid
+编辑 `Gte-Qwen-2B/xinference.sh`：
 
+```bash
+--model-path /your/actual/model/path/gte_Qwen2-1_5B-instruct
+```
 
-# 查看挂载的程序uid
-ps -ef | grep "bash run_model/Qwen3-4B-Instruct/qwen3.sh" | grep -v grep   
-# bash run_model/qwen3.sh   python app.py
+### 修改端口
 
-zhouzeh+ 3863946       1  0 Oct13 ?        00:00:01 python api/api.py
-zhouzeh+ 3863964 3863946  0 Oct13 ?        00:09:05 /home/zhouzehui/miniconda3/envs/addon_v1/bin/python api/api.py
+- Qwen3: 修改 `--port` 参数
+- Xinference: 修改 `--port` 参数
+- 同步修改 `graphrag/sample/settings.yaml` 中的 `api_base` 地址
 
-- 先终止子进程,再终止父进程
-kill 3863964
-kill 3863946
+## ❗ 常见问题
 
+### 端口被占用
 
+```bash
+# 查看端口占用
+lsof -i:8006
+lsof -i:9997
 
+# 修改端口后需同步修改 settings.yaml
+```
 
+### CUDA 内存不足
 
+- 减小 `gpu_memory_utilization` 参数
+- 减小 `max_model_len` 参数
+- 使用更小的模型
 
-<!-- # 挂载接口
-conda activate addon_v1
-python api/api.py
+### 模型下载失败
 
-- 挂载后台
-nohup python api/api.py > run_model/nohup/api/1013/nohup.txt 2> run_model/nohup/api/1013/error.txt & -->
+- 检查网络连接
+- 尝试更换镜像源
+- 使用手动下载后放入指定目录
+
 
